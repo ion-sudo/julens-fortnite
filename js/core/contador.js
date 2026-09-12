@@ -1,7 +1,13 @@
 /**
- * visits.js
+ * contador.js
  * ---------------------------------------------------------------
  * CONTADOR DE VISITAS: cuanta gente ha entrado al juego.
+ *
+ * (Antes se llamaba visits.js. Se le cambio el nombre a proposito: los
+ * navegadores que ya habian entrado se quedaban con el archivo viejo
+ * guardado hasta 10 minutos y seguian sumando en el contador antiguo,
+ * asi que se veia una cifra que no era. Una direccion nueva no puede
+ * estar guardada de antes, y eso corta el problema de raiz.)
  *
  * El juego es una pagina ESTATICA (GitHub Pages): no hay servidor
  * nuestro, asi que no hay donde guardar un numero compartido entre

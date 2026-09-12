@@ -21,7 +21,7 @@ import { Menu } from './ui/menu.js';
 import { showFatalError, watchRuntimeErrors } from './core/boot.js';
 import { BootScreen } from './ui/bootScreen.js';
 import { AudioPanel } from './ui/audioPanel.js';
-import { contarVisita, formatear } from './core/visits.js';
+import { contarVisita, formatear } from './core/contador.js';
 
 const canvas = document.getElementById('game-canvas');
 
