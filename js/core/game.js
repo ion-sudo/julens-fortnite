@@ -201,6 +201,9 @@ export class Game {
    *   defecto 'royale', que es el battle royale de siempre.
    */
   startMatch(loadout, mode = DEFAULT_MODE) {
+    // El aviso de la partida anterior fuera, ANTES de montar nada: los
+    // sistemas ponen los suyos durante el montaje (ver _afterSetup).
+    this.message = null;
     this.minigame = null;
     this.minigameDef = null;
 
@@ -268,7 +271,14 @@ export class Game {
     // HORA Y CLIMA de esta partida: los dos al azar, y el reloj sigue
     // corriendo mientras juegas.
     this.ambience.reset(Math.random, { enabled: true });
-    this.showMessage(this.ambience.descripcion, 'rare');
+    // Si el modo ya ha puesto su aviso (el de JULEN BLITZ), la hora se
+    // le anade detras en vez de pisarlo: solo hay un hueco de aviso y
+    // los dos tienen que verse.
+    if (this.message) {
+      this.showMessage(`${this.message.text} · ${this.ambience.descripcion}`, this.message.rarity);
+    } else {
+      this.showMessage(this.ambience.descripcion, 'rare');
+    }
 
     // Ya sabemos donde ha caido: ahora si se centra la camara.
     this.camera.snapTo(this.player);
@@ -640,7 +650,11 @@ export class Game {
     // El pico golpea a bots y dianas: se recalcula cada frame en update().
     this.combat.targets = this.targets;
 
-    this.message = null;
+    // OJO: aqui NO se borra `this.message`. Antes si, y como esto va lo
+    // ultimo del arranque, se comia los avisos que la propia partida
+    // acababa de poner: el de la hora y el clima ("Noche cerrada") y el
+    // de JULEN BLITZ no llegaban a verse nunca. Se borra al PRINCIPIO de
+    // startMatch y startMinigame, antes de que nadie ponga nada.
     this.zoneLabel = null;
     this.currentZone = null;
     this.showMap = false;
@@ -723,6 +737,7 @@ export class Game {
    * @param {object} loadout
    */
   startMinigame(id, loadout) {
+    this.message = null;   // idem: antes de montar, no despues
     // Un minijuego no es un modo: nada de nivel Blitz aqui.
     this.blitz = null;
 

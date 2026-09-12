@@ -69,6 +69,24 @@ const CLIMAS = [
   { id: 'niebla', nombre: 'Niebla', peso: 10, velo: { r: 205, g: 212, b: 225 }, alpha: 0.16, lluvia: 0 },
 ];
 
+/**
+ * A QUE HORA EMPIEZA LA PARTIDA.
+ *
+ * Antes era un azar plano entre 0 y 1, y como el dia ocupa casi media
+ * vuelta, 1 de cada 5 partidas era de dia de principio a fin: se veia
+ * exactamente igual que antes de existir el ciclo, y parecia que no
+ * hubiera nada. Ahora se sortea un TRAMO con pesos y luego una hora
+ * dentro de el, para que casi siempre pase algo que se note.
+ *
+ *   desde/hasta  tramo de la hora (0 medianoche, 0,5 mediodia)
+ */
+const SALIDAS = [
+  { id: 'noche', desde: 0.88, hasta: 1.10, peso: 30 },   // cruza medianoche
+  { id: 'amanecer', desde: 0.12, hasta: 0.26, peso: 22 },
+  { id: 'atardecer', desde: 0.62, hasta: 0.80, peso: 30 },
+  { id: 'dia', desde: 0.34, hasta: 0.56, peso: 18 },
+];
+
 /** Cuantas estrellas tiene el cielo de noche. */
 const ESTRELLAS = 70;
 
@@ -98,7 +116,8 @@ export class Ambience {
    */
   reset(rng = Math.random, opciones = {}) {
     this.enabled = opciones.enabled !== false;
-    this.hora = rng();
+    const tramo = pesado(SALIDAS, rng);
+    this.hora = (tramo.desde + rng() * (tramo.hasta - tramo.desde)) % 1;
     this.clima = pesado(CLIMAS, rng);
 
     // Estrellas repartidas por la mitad de arriba de la pantalla.
