@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>JULEN'S FORTNITE</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/menu.css" />
+</head>
+<body class="in-menu">
+  <!--
+    JULEN'S FORTNITE - Battle Royale 2D (vista de lado)
+    PASO 1: escenario + personaje (andar / saltar / agacharse / correr con barra).
+    PASO 2: menu principal, pavos, tienda de cosmeticos, taquilla y guardado.
+    Pendiente: construccion, armas, cofres, bots, bus de batalla...
+  -->
+  <div id="game-container">
+    <!-- Lienzo principal: resolucion interna fija, escalado por CSS -->
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
+
+    <!--
+      PORTADA DE CARGA. Se pinta encima de todo mientras arranca el
+      juego y se quita sola con un fundido (ver js/ui/bootScreen.js).
+      Va aqui dentro para que la escale el mismo CSS que el lienzo.
+    -->
+    <canvas id="boot-canvas" width="1280" height="720"></canvas>
+
+    <!-- ===================== HUD DE PARTIDA ===================== -->
+    <div id="hud-overlay">
+      <div id="game-title">
+        <span class="title-julen">JULEN'S</span><span class="title-fort">FORTNITE</span>
+        <span class="title-step">v1.0</span>
+      </div>
+
+      <div id="controls-help">
+        <h3>Controles</h3>
+        <ul>
+          <li><b>A</b> / <b>D</b> — Mover</li>
+          <li><b>W</b> / <b>Espacio</b> — Saltar (en el agua: bucear)</li>
+          <li><b>S</b> / <b>Ctrl</b> — Agacharse</li>
+          <li><b>Shift</b> — Correr (gasta energia)</li>
+          <li><b>Clic izq.</b> — Disparar (gasta balas) / golpear / curarse</li>
+          <li><b>Clic der.</b> — Apuntar</li>
+          <li><b>F</b> — Pico · <b>1</b>-<b>5</b> — Ranuras</li>
+          <li><b>Q</b> — Construir · <b>Z</b> pared · <b>X</b> suelo · <b>C</b> rampa</li>
+          <li><b>E</b> — Abrir/cerrar puerta · cofre · recoger</li>
+          <li><b>V</b> — Subir/bajar de un vehiculo</li>
+          <li><b>B</b> — Emotes (bailes)</li>
+          <li><b>R</b> — Soltar lo equipado</li>
+          <li><b>M</b> — Ver el mapa</li>
+          <li><b>Esc</b> — Terminar partida (+50 pavos)</li>
+          <li><b>H</b> — Ocultar/mostrar esta ayuda</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===================== MENU PRINCIPAL ===================== -->
+    <div id="menu-root">
+
+      <!-- Barra superior: logo + saldo de pavos -->
+      <header class="menu-topbar">
+        <div class="menu-logo">
+          <span class="title-julen">JULEN'S</span><span class="title-fort">FORTNITE</span>
+        </div>
+
+        <!-- Nivel y barra de experiencia -->
+        <div class="level-box" id="level-box" title="Nivel y experiencia">
+          <div class="level-badge"><span id="level-number">1</span></div>
+          <div class="level-info">
+            <div class="level-bar"><div class="level-bar-fill" id="level-fill"></div></div>
+            <span class="level-xp" id="level-xp">0 / 120 XP</span>
+          </div>
+        </div>
+
+        <div class="vbucks" id="vbucks-display" title="Pavos">
+          <span class="vbucks-icon">V</span>
+          <span class="vbucks-amount" id="vbucks-amount">0</span>
+          <span class="vbucks-label">pavos</span>
+        </div>
+      </header>
+
+      <!-- ---------- Pantalla: INICIO ---------- -->
+      <section class="menu-screen is-active" data-screen="home">
+        <div class="home-layout">
+
+          <nav class="home-menu">
+            <button class="btn btn-play" data-action="mode" data-id="royale">
+              <span class="btn-title">JULEN ROYALE</span>
+              <span class="btn-sub">75 jugadores · salta a la isla</span>
+            </button>
+            <button class="btn btn-modes" data-action="goto" data-screen="modes">
+              <span class="btn-title">MAS JUEGOS</span>
+              <span class="btn-sub" id="modes-sub">Elige modo de juego</span>
+            </button>
+            <button class="btn btn-shop" data-action="goto" data-screen="shop">
+              <span class="btn-title">TIENDA</span>
+              <span class="btn-sub" id="shop-sub">Skins, picos y paravelas</span>
+            </button>
+            <button class="btn btn-locker" data-action="goto" data-screen="locker">
+              <span class="btn-title">TAQUILLA</span>
+              <span class="btn-sub">Equipa lo que tienes</span>
+            </button>
+            <button class="btn btn-pass" data-action="goto" data-screen="pass">
+              <span class="btn-title">PASE DE BATALLA</span>
+              <span class="btn-sub" id="pass-sub">100 niveles de recompensas</span>
+            </button>
+            <button class="btn btn-minigames" data-action="goto" data-screen="minigames">
+              <span class="btn-title">MINIJUEGOS</span>
+              <span class="btn-sub" id="minigames-sub">7 modos para entrenar</span>
+            </button>
+            <button class="btn btn-missions" data-action="goto" data-screen="missions">
+              <span class="btn-title">MISIONES</span>
+              <span class="btn-sub" id="missions-sub">Desafios y recompensas</span>
+            </button>
+            <button class="btn btn-profile" data-action="goto" data-screen="profile">
+              <span class="btn-title">PERFIL</span>
+              <span class="btn-sub" id="profile-sub">Nombre, records y emotes</span>
+            </button>
+            <button class="btn btn-help" data-action="goto" data-screen="help">
+              <span class="btn-title">INSTRUCCIONES</span>
+              <span class="btn-sub">Controles y ajustes</span>
+            </button>
+          </nav>
+
+          <!-- Vitrina del personaje con lo equipado -->
+          <div class="showcase">
+            <div class="showcase-stage">
+              <canvas id="showcase-canvas" width="420" height="460"></canvas>
+            </div>
+
+            <div class="showcase-info">
+              <span class="showcase-rarity" id="showcase-rarity">Comun</span>
+              <h2 class="showcase-name" id="showcase-name">Recluta</h2>
+
+              <div class="showcase-gear">
+                <div class="gear-chip">
+                  <canvas class="gear-chip-canvas" id="chip-pickaxe" width="96" height="96"></canvas>
+                  <div class="gear-chip-text">
+                    <span class="gear-chip-label">Pico</span>
+                    <span class="gear-chip-name" id="chip-pickaxe-name">-</span>
+                  </div>
+                </div>
+                <div class="gear-chip">
+                  <canvas class="gear-chip-canvas" id="chip-glider" width="96" height="96"></canvas>
+                  <div class="gear-chip-text">
+                    <span class="gear-chip-label">Paravela</span>
+                    <span class="gear-chip-name" id="chip-glider-name">-</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ---------- Pantalla: TIENDA ---------- -->
+      <section class="menu-screen" data-screen="shop">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">TIENDA</h2>
+          <div class="screen-tabs" data-tabs="shop"></div>
+        </div>
+        <div class="item-grid" id="shop-grid"></div>
+      </section>
+
+      <!-- ---------- Pantalla: PASE DE BATALLA ---------- -->
+      <section class="menu-screen" data-screen="pass">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">PASE DE BATALLA</h2>
+          <div class="screen-tabs">
+            <span class="pass-state" id="pass-state">Pase gratis</span>
+          </div>
+        </div>
+
+        <div class="pass-top" id="pass-top"></div>
+        <div class="pass-grid" id="pass-grid"></div>
+      </section>
+
+      <!-- ---------- Pantalla: PERFIL ---------- -->
+      <section class="menu-screen" data-screen="profile">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">PERFIL</h2>
+          <div class="screen-tabs">
+            <span class="minigames-hint">Tu nombre, tus numeros y tus emotes</span>
+          </div>
+        </div>
+        <div class="profile-body" id="profile-body"></div>
+      </section>
+
+      <!-- ---------- Pantalla: MAS JUEGOS (selector de modos) ---------- -->
+      <section class="menu-screen" data-screen="modes">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">MAS JUEGOS</h2>
+          <div class="screen-tabs">
+            <span class="minigames-hint">Todos dan pavos, XP y progreso del pase</span>
+          </div>
+        </div>
+        <div class="mode-grid" id="mode-grid"></div>
+      </section>
+
+      <!-- ---------- Pantalla: MINIJUEGOS ---------- -->
+      <section class="menu-screen" data-screen="minigames">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">MINIJUEGOS</h2>
+          <div class="screen-tabs">
+            <span class="minigames-hint">Entrena sin arriesgar la partida</span>
+          </div>
+        </div>
+        <div class="minigame-grid" id="minigame-grid"></div>
+      </section>
+
+      <!-- ---------- Pantalla: MISIONES ---------- -->
+      <section class="menu-screen" data-screen="missions">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">MISIONES</h2>
+          <div class="screen-tabs">
+            <span class="missions-count" id="missions-count">0 / 0</span>
+          </div>
+        </div>
+        <div class="missions-list" id="missions-list"></div>
+      </section>
+
+      <!-- ---------- Pantalla: TAQUILLA ---------- -->
+      <section class="menu-screen" data-screen="locker">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">TAQUILLA</h2>
+          <div class="screen-tabs" data-tabs="locker"></div>
+        </div>
+        <div class="item-grid" id="locker-grid"></div>
+      </section>
+
+      <!-- ---------- Pantalla: INSTRUCCIONES ---------- -->
+      <section class="menu-screen" data-screen="help">
+        <div class="screen-header">
+          <button class="btn-back" data-action="goto" data-screen="home">‹ Volver</button>
+          <h2 class="screen-title">INSTRUCCIONES</h2>
+        </div>
+
+        <div class="help-panels">
+          <div class="help-card">
+            <h3>Movimiento</h3>
+            <ul class="key-list">
+              <li><kbd>A</kbd> <kbd>D</kbd><span>Mover a izquierda y derecha</span></li>
+              <li><kbd>W</kbd> <kbd>Espacio</kbd><span>Saltar (cuanto mas mantienes, mas alto)</span></li>
+              <li><kbd>Espacio</kbd><span>Dentro del agua: bucear hacia el fondo</span></li>
+              <li><kbd>S</kbd> <kbd>Ctrl</kbd><span>Agacharse</span></li>
+              <li><kbd>Shift</kbd><span>Correr; gasta la barra de corrida</span></li>
+              <li><kbd>S</kbd>+<kbd>Salto</kbd><span>Bajarse de una plataforma fina</span></li>
+            </ul>
+          </div>
+
+          <div class="help-card">
+            <h3>Combate e inventario</h3>
+            <ul class="key-list">
+              <li><kbd>Clic izq</kbd><span>Disparar, golpear con el pico o tomar una cura</span></li>
+              <li><kbd>Clic der</kbd><span>Apuntar: mira de precision y menos dispersion</span></li>
+              <li><kbd>F</kbd><span>Cajita 1: el pico</span></li>
+              <li><kbd>1</kbd>…<kbd>5</kbd><span>Cajitas 2 a 6: armas y curas</span></li>
+              <li><kbd>E</kbd><span>Abrir <b>y cerrar</b> puertas, abrir cofres y recoger objetos</span></li>
+              <li><kbd>R</kbd><span>Soltar lo que llevas equipado</span></li>
+              <li><kbd>V</kbd><span>Subirte y bajarte de un vehiculo</span></li>
+              <li><kbd>B</kbd><span>Rueda de emotes (1-6 para elegir)</span></li>
+            </ul>
+
+            <h3>Construccion</h3>
+            <ul class="key-list">
+              <li><kbd>Q</kbd><span>Entrar y salir del modo construccion</span></li>
+              <li><kbd>Z</kbd><span>Pared: tapa el paso y para las balas</span></li>
+              <li><kbd>X</kbd><span>Suelo: plataforma para cruzar o taparte</span></li>
+              <li><kbd>C</kbd><span>Rampa: escalones para subir</span></li>
+              <li><kbd>Clic izq</kbd><span>Colocar la pieza (10 de madera cada una)</span></li>
+            </ul>
+          </div>
+
+          <div class="help-card">
+            <h3>Menu y depuracion</h3>
+            <ul class="key-list">
+              <li><kbd>Esc</kbd><span>Volver al menu principal</span></li>
+              <li><kbd>H</kbd><span>Ocultar/mostrar la ayuda en partida</span></li>
+              <li><kbd>M</kbd><span>Abrir el mapa de la isla</span></li>
+              <li><kbd>F1</kbd><span>Ver hitboxes y datos de depuracion</span></li>
+            </ul>
+
+            <h3>Minijuegos</h3>
+            <p class="help-note">
+              Desde el menu se entra a <b>7 minijuegos</b> para entrenar sin arriesgar
+              la partida: campo de tiro, zona de entrenamiento, carrera de obstaculos,
+              caja de construccion, 1 contra 1, recoge-monedas y pilla-pilla. Cada uno
+              guarda tu <b>mejor marca</b>. Ya funcionan el <b>campo de tiro</b> (60 s
+              para reventar dianas), la <b>zona de entrenamiento</b> (maniquies y las
+              10 armas para probarlas sin prisa), la <b>carrera de obstaculos</b>
+              (20 plataformas contrarreloj en <b>tres niveles</b>: el normal trae pinchos
+              y trampolines, y el dificil ademas laseres y llamaradas; si te caes o te
+              toca algo vuelves a la ultima plataforma que pisaste)
+              la <b>caja de construccion</b> (madera infinita para practicar), el
+              <b>1 contra 1</b> (rondas seguidas contra un bot, y <b>cada uno viene mas
+              duro</b>), el <b>recoge-monedas</b> (60 s a la carrera) y el
+              <b>pilla-pilla</b> (once jugadores: uno la queda, 30 s para esconderse y
+              2:30 de caceria; a quien pillan, pilla tambien). En la carrera,
+              <b>cada intento es un recorrido nuevo</b>, si te caes vuelves a la salida
+              con el crono corriendo, y no se puede construir: seria trampa.
+            </p>
+
+            <h3>Pase de batalla</h3>
+            <p class="help-note">
+              <b>100 niveles</b> de recompensas que se desbloquean subiendo de nivel, sin
+              tener que reclamar nada. La ruta <b>gratis</b> da 12 premios sueltos; la
+              <b>premium</b> (4000 pavos) abre los 100 niveles enteros: 22 cosmeticos que
+              <b>no estan en la tienda</b> —de Cadete Estelar a <b>ECLIPSE</b>, la skin
+              del nivel 100— y unos 3500 pavos repartidos. Si lo compras a mitad de
+              temporada te llevas <b>tambien lo de los niveles que ya tenias</b>, y todo
+              lo que desbloqueas se equipa desde la <b>taquilla</b> como el resto.
+            </p>
+
+            <h3>Niveles y experiencia</h3>
+            <p class="help-note">
+              Jugar da <b>XP</b>: por la partida, por cada eliminacion, por ganar, por
+              cumplir misiones, por abrir cofres, por el dano hecho... Al juntar
+              suficiente <b>subes de nivel</b> (hay 100). El nivel y la barra de progreso
+              estan arriba en el menu, junto a los pavos, y se guardan solos.
+            </p>
+
+            <h3>Misiones</h3>
+            <p class="help-note">
+              En el menu hay <b>19 misiones</b> con recompensa en <b>pavos</b>: unas se
+              cumplen <b>en una partida</b> (3 eliminaciones, 5 cofres, entrar en 3
+              edificios...) y otras se van <b>acumulando</b> (500 de madera, 25
+              eliminaciones, ganar una partida). Las de <b>aterrizaje</b> te piden caer
+              en un sitio concreto. Al cumplirse pagan solas y sale el aviso en pantalla.
+            </p>
+
+            <h3>Progreso</h3>
+            <p class="help-note">
+              Se empieza con <b>0 pavos</b> y se ganan <b>50 por partida</b>, mas lo
+              que den las misiones. Los pavos, las compras, lo equipado y el progreso
+              de las misiones se guardan solos en este navegador.
+            </p>
+            <button class="btn-danger" data-action="reset">Reiniciar progreso</button>
+          </div>
+
+          <div class="help-card">
+            <h3>Municion y agua</h3>
+            <p class="help-note">
+              Las armas gastan <b>balas</b>: hay cinco tipos y cada arma usa el suyo.
+              El contador aparece junto al inventario. Se consiguen en las
+              <b>cajas de municion</b> del suelo y de los cofres.
+              En los <b>lagos</b> y canales se puede <b>nadar</b>: dentro del agua
+              Espacio bucea en vez de saltar, y los <b>peces</b> dan vida.
+            </p>
+
+            <h3>El bus de batalla</h3>
+            <p class="help-note">
+              Cada partida empieza <b>en el bus</b>, que cruza el cielo. Pulsa
+              <b>Espacio</b> para saltar, dirigete con <b>A</b>/<b>D</b> y la
+              <b>paravela</b> se abre sola al acercarte al suelo (o con Espacio).
+              El juego normal empieza al tocar tierra.
+            </p>
+
+            <h3>Madera y construccion</h3>
+            <p class="help-note">
+              Con el <b>pico</b> (tecla <b>F</b>) se pican los <b>arboles</b>: unos
+              5 segundos de golpes y el arbol cae dandote <b>60 de madera</b>.
+              El contador aparece abajo a la izquierda. Con <b>Q</b> entras en
+              <b>modo construccion</b>: veras una silueta de la pieza (verde si
+              puedes ponerla, roja si no). Cada pieza cuesta <b>10 de madera</b>.
+              Todo lo construido tiene <b>vida</b> y se puede romper a
+              <b>picotazos o a tiros</b>: tanto tu como los bots, que tambien
+              talan arboles y tiran abajo tus construcciones.
+              Y los bots <b>tambien construyen</b>: <b>rampas</b> para salir de un atasco
+              y <b>paredes</b> para cubrirse cuando les estan disparando. Lo que levantan
+              se queda en el mapa: puedes usarlo y romperlo.
+            </p>
+
+            <h3>Granadas</h3>
+            <p class="help-note">
+              Se recogen del suelo y de los cofres, y van en una <b>ranura del
+              inventario</b> como las curas: se apilan hasta <b>6</b>, las equipas con
+              <b>1..5</b> y las lanzas con el <b>clic izquierdo</b> hacia donde apuntes.
+              Salen en <b>arco</b>: de cerca casi rectas, de lejos en parabola alta.
+            </p>
+            <p class="help-note">
+              Rebotan por el suelo y <b>explotan a los 2 segundos</b> — o casi al momento
+              si ya se han parado, para que tirarla a los pies de alguien sirva de algo.
+              Hacen <b>daño en area</b>: mucho en el centro y poco en el borde. Rompen
+              <b>construcciones</b> de un golpe... y <b>a ti tambien te pillan</b>, asi
+              que piensatelo antes de tirarla de cerca.
+            </p>
+
+            <h3>Granada de choque y escudo burbuja</h3>
+            <p class="help-note">
+              La <b>GRANADA DE CHOQUE</b> (azul) <b>no hace daño</b>: manda por los aires
+              a todo el que pille, y a ti tambien. Sirve para escapar de un tiroteo,
+              para subir a un tejado sin construir o para descolocar al que viene a por
+              ti. Aqui <b>te interesa</b> que te pille.
+            </p>
+            <p class="help-note">
+              El <b>ESCUDO BURBUJA</b> deja una <b>cupula</b> que dura 30 segundos y
+              <b>para las balas por los dos lados</b>: ni te disparan desde fuera ni tu
+              disparas desde dentro. Pero <b>se puede entrar andando</b>, asi que no te
+              salva de que se te metan dentro. Se rompe a tiros.
+            </p>
+
+            <h3>Torretas y trampas</h3>
+            <p class="help-note">
+              Se recogen del suelo, de los cofres y de los supply drops, y se
+              <b>colocan</b> con el <b>clic izquierdo</b> llevandolas equipadas. Mientras
+              apuntas se ve un <b>fantasma</b> de donde va a quedar: <b>verde</b> si se
+              puede, <b>rojo</b> si no. Valen el suelo, los tejados y lo que hayas
+              construido tu.
+            </p>
+            <p class="help-note">
+              La <b>TORRETA</b> dispara sola a quien se acerque a menos de 620 px.
+              La <b>TRAMPA DE PINCHOS</b> hace daño a quien la pise. Las dos funcionan
+              solas una vez puestas, <b>no te hacen nada a ti</b>, y se pueden
+              <b>destruir</b> a tiros, a picotazos o de un granadazo.
+            </p>
+
+            <h3>Supply drops</h3>
+            <p class="help-note">
+              Cada cierto rato cae del cielo una <b>caja de suministros</b> con
+              paracaidas. Tarda unos segundos en bajar y deja un <b>haz de luz</b> y un
+              anillo marcando donde va a caer; si queda fuera de pantalla, una
+              <b>flecha en el borde</b> te dice hacia donde y a cuantos metros.
+            </p>
+            <p class="help-note">
+              Se abre con <b>E</b> y trae <b>lo mejor del juego</b>: un arma legendaria o
+              mejor, otra epica, curas, granadas y municion. Siempre cae dentro de la
+              zona segura. <b>Los bots tambien van a por ella</b> en cuanto ven el
+              paracaidas, asi que llegar el primero no suele salir gratis.
+            </p>
+
+            <h3>Vehiculos</h3>
+            <p class="help-note">
+              Por la isla hay <b>12 vehiculos</b> —buggys, karts y furgonetas—, al menos
+              uno por cada sitio. Acercate y pulsa <b>V</b> para subirte, y <b>V</b> otra vez
+              para bajarte. Van bastante mas rapido que corriendo (hasta 900 px/s frente
+              a 400) y <b>saltan</b> con Espacio para superar los escalones del terreno.
+              Al volante no se dispara ni se construye: las manos estan en el volante.
+              <b>Los bots tambien conducen</b> cuando tienen que cruzar medio mapa, asi
+              que un coche ocupado no se puede robar: hay que esperar a que se baje.
+            </p>
+
+            <h3>Tirolinas y saltadores</h3>
+            <p class="help-note">
+              Por la isla hay <b>8 tirolinas</b>: seis cruzan de un sitio al siguiente
+              y dos recorren enteros Villa Pavo y la Feria. Te enganchas <b>al tocar la cuerda</b> y te
+              deslizas rapidisimo; con <b>Espacio</b> te sueltas, y sales con la inercia
+              del viaje. Y hay <b>20 saltadores</b>, dos por sitio: al pisarlos te lanzan
+              hacia arriba y hacia delante, casi el doble de alto que un salto normal,
+              para subir a los tejados y a las plataformas altas.
+              <b>Los bots tambien</b> se enganchan a las cuerdas y usan los saltadores.
+            </p>
+
+            <h3>Casas y edificios</h3>
+            <p class="help-note">
+              Desde fuera una casa se ve como una casa: <b>fachada, ventanas y tejado</b>,
+              sin ver lo de dentro. Al abrir la puerta con <b>E</b> y entrar, la fachada
+              se desvanece y aparece el <b>interior</b>: las habitaciones, los muebles,
+              los cofres... y quien estuviera escondido dentro.
+              Muchos edificios tienen <b>varias plantas</b> (la mansion tiene 3) unidas
+              por <b>escaleras</b> que se suben <b>andando</b>, sin saltar. El botin esta
+              repartido por plantas, asi que compensa subir hasta arriba.
+            </p>
+            <p class="help-note">
+              Cada edificio tiene <b>dos puertas</b>, una a cada lado, y por fuera unas
+              <b>cornisas</b> escalonadas: saltando de una a otra se <b>escala la fachada
+              hasta el tejado</b>, y por arriba se cruza al otro lado. Hace falta, porque
+              una mansion mide 418 px y el salto solo sube 150.
+            </p>
+            <p class="help-note">
+              Con <b>E</b> la puerta mas cercana se <b>abre y se cierra</b>. Cerrarla <b>te protege</b>:
+              vuelve a ser un muro, corta el paso y <b>para las balas</b>. Pero un enemigo
+              pegado a ella acaba <b>forzandola</b> en poco mas de un segundo, asi que te
+              da el respiro justo para curarte o recargar, no para esconderte toda la partida.
+            </p>
+
+            <h3>Tu perfil</h3>
+            <p class="help-note">
+              En <b>PERFIL</b> te pones un <b>nombre</b> (el primero es <b>gratis</b>;
+              cambiarlo despues cuesta <b>500 pavos</b>) y sale encima de tu personaje
+              en la partida. Ahi tambien estan tus <b>estadisticas</b> —victorias,
+              eliminaciones, partidas, % de victorias, tu mejor partida— y tu
+              <b>racha</b>: sube al ganar y vuelve a cero al perder.
+            </p>
+
+            <h3>Emotes</h3>
+            <p class="help-note">
+              Pulsa <b>B</b> en partida para abrir la <b>rueda de emotes</b> y elige con
+              el raton o con las teclas <b>1..6</b>. Hay <b>8 bailes y gestos</b>: dos
+              gratis y el resto se compran con pavos.
+            </p>
+            <p class="help-note">
+              Se compran en la <b>TIENDA</b> (pestaña <i>Emotes</i>), se ponen en la
+              rueda desde la <b>TAQUILLA</b>, y en el <b>PERFIL</b> los tienes todos
+              juntos. Caben <b>seis</b> en la rueda: para meter otro, quita uno antes.
+            </p>
+            <p class="help-note">
+              Ojo: <b>bailando estas vendido</b>. No disparas, no construyes y no te
+              curas. Se corta en cuanto te mueves, saltas, disparas o te dan un tiro.
+            </p>
+
+            <h3>Modos de juego</h3>
+            <p class="help-note">
+              El boton grande del menu es <b>JULEN ROYALE</b>: el battle royale
+              completo de siempre. Y en <b>MAS JUEGOS</b> estan todos los modos, para
+              elegir a que jugar.
+            </p>
+
+            <h3>Duos y Escuadron</h3>
+            <p class="help-note">
+              En <b>MAS JUEGOS</b> tienes <b>JULEN DUOS</b> (tu y un aliado) y
+              <b>JULEN ESCUADRON</b> (tu y tres). Los otros 74 jugadores tambien van
+              repartidos en equipos del mismo tamano. Tus aliados llevan la
+              <b>chapa verde</b> con un galon encima, y abajo a la derecha tienes la
+              lista de <b>TU ESCUADRON</b> con la vida de cada uno.
+            </p>
+            <p class="help-note">
+              <b>No hay fuego amigo</b>: ni balas, ni granadas, ni torretas, ni trampas,
+              ni el pico. Ganas cuando no queda ningun escuadron enemigo, <b>aunque
+              hayan caido companeros tuyos</b>.
+            </p>
+
+            <h3>Abatido y reanimar</h3>
+            <p class="help-note">
+              Con companeros vivos, quedarte a cero <b>no te mata</b>: quedas
+              <b>ABATIDO</b> en el suelo. Puedes arrastrarte, pero no disparar ni
+              construir, y te vas <b>desangrando</b> (unos 26 segundos, menos si te
+              rematan).
+            </p>
+            <p class="help-note">
+              Para levantar a un companero, acercate y <b>MANTEN la E</b> 3 segundos:
+              se levanta con 35 de vida. <b>Tus aliados tambien te levantan a ti.</b>
+              Ojo: si eres el <b>ultimo</b> de tu equipo en pie, mueres del tiron.
+            </p>
+
+            <h3>Julen Blitz</h3>
+            <p class="help-note">
+              El battle royale <b>expres</b>: <b>32 jugadores</b> en <b>medio mapa</b>,
+              partidas de un par de minutos y <b>nada de construir</b> (no hay madera:
+              aqui se pelea de frente). Todos empezais con <b>la misma arma</b>, asi que
+              nadie gana por suerte al aterrizar, y la <b>tormenta</b> empieza casi al
+              tocar el suelo y no para de cerrarse.
+            </p>
+            <p class="help-note">
+              Cada baja y cada rato aguantando dentro de la tormenta suben tu
+              <b>NIVEL BLITZ</b>. Abajo a la izquierda tienes la <b>escalera de los
+              8 niveles</b>: los que ya has pasado van a todo color y los que faltan
+              quedan apagados, pero con el color del arma que dan, para que veas lo
+              que te espera arriba.
+            </p>
+            <p class="help-note">
+              Al subir de nivel sale <b>NIVEL X</b> en grande y el arma <b>CAE DEL
+              CIELO</b> en una caja con paracaidas, justo encima de ti. Ve a por ella:
+              el paracaidas lo ve todo el mundo. Y ademas te llevas una
+              <b>bendicion</b>: mas dano, mas velocidad, mas vida, mas cadencia,
+              curarte al matar o escudo. Se <b>acumulan</b>, y las repetidas suman.
+            </p>
+
+            <h3>Armas del Blitz</h3>
+            <p class="help-note">
+              Cinco armas que <b>solo salen aqui</b>:
+              la <b>Ametralladora Ligera</b> (no para de escupir balas),
+              el <b>Revolver Pesado</b> (seis balas y ninguna de sobra),
+              el <b>Lanzallamas</b> (de cerca no hay quien lo aguante),
+              el <b>Rifle de Pulsos</b> (atraviesa a todo el que este en fila)
+              y la <b>Grieta Portatil</b>.
+            </p>
+            <p class="help-note">
+              La <b>GRIETA PORTATIL</b> no dispara: al usarla con el clic izquierdo
+              abre una grieta y <b>te sube al cielo</b>, cayendo, con la paravela
+              lista. Sirve para <b>escapar</b> de un tiroteo que llevas perdido o para
+              cruzar medio mapa de golpe. Como aqui no se puede construir una rampa
+              para huir, es la unica salida rapida que hay.
+            </p>
+            <p class="help-note">
+              Busca los <b>COFRES DORADOS</b>: brillan el doble de lejos, sueltan un
+              arma de rareza alta y regalan una bendicion. Como se ven desde muy lejos,
+              suele haber alguien mas yendo a por el mismo. Aqui hay <b>bastantes menos
+              cofres</b> que en el Royale: en un modo de dos minutos, cada cofre que
+              abres es tiempo que no estas peleando.
+            </p>
+
+            <h3>Armas exoticas</h3>
+            <p class="help-note">
+              Por encima de las miticas hay una rareza mas: las <b>EXOTICAS</b>, de
+              color <b>turquesa</b>. Pegan mas que ninguna otra arma del juego y
+              <b>no salen nunca</b> por el suelo ni en un cofre normal. Solo hay dos
+              formas de tener una, y las dos son del Julen Blitz:
+            </p>
+            <p class="help-note">
+              1. Llegar al <b>nivel Blitz 8</b>, el ultimo. Hace falta encadenar bajas
+              <i>y</i> aguantar hasta el final: solo con una cosa no llega.<br>
+              2. Tener suerte en un <b>cofre dorado</b>: uno de cada diez suelta una.
+            </p>
+
+            <h3>Battle royale</h3>
+            <p class="help-note">
+              Cada partida hay <b>74 bots</b> con nombres distintos, y todos
+              (tu incluido) caeis <b>repartidos por el mapa</b>. Gana el ultimo en pie.
+              Arriba a la derecha veras los <b>vivos</b> y tus <b>kills</b>.
+              La <b>zona segura</b> se va cerrando: fuera de ella pierdes vida.
+            </p>
+
+            <h3>Los 10 sitios</h3>
+            <p class="help-note">
+              Pinar Perdido, Cala Rocosa, <b>Puerto Ancla</b>, Villa Pavo, Cumbre Helada,
+              Fabrica Tornillo, <b>Feria Fortuna</b>, Mansion Dorada, Dunas Secas y
+              <b>Volcan Ceniza</b>. Cada uno tiene su ambiente, su color de cielo y sus
+              <b>edificios</b>: acercate a una puerta y pulsa <b>E</b> para entrar.
+              Dentro hay cofres y municion.
+            </p>
+            <p class="help-note">
+              Los tres ultimos son <b>nuevos</b>: un puerto con su grua, sus contenedores
+              y un faro; una feria con norias girando, carpas y casetas; y un volcan de
+              roca negra con grietas de lava y fumarolas. Pulsa <b>M</b> para verlos todos
+              en el mapa.
+            </p>
+
+            <h3>Proximamente</h3>
+            <p class="help-note">
+              Construccion, bus de batalla, paravela en la caida y el mapa.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Aviso flotante (compras, errores...) -->
+      <div id="menu-toast" class="toast"></div>
+    </div>
+  </div>
+
+  <!--
+    Vigilante de arranque. Va ANTES y como script clasico (sin type=module)
+    a proposito: si el navegador mezcla versiones cacheadas de los modulos,
+    el fallo ocurre al enlazarlos y ningun codigo de dentro llega a correr.
+    Este script si corre, lo detecta y recarga sin cache.
+  -->
+  <script src="js/watchdog.js"></script>
+
+  <!-- Punto de entrada (modulos ES) -->
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

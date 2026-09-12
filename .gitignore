@@ -1,0 +1,15 @@
+# Basura del sistema
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+# Python del servidor de desarrollo
+__pycache__/
+*.pyc
+
+# Registros y temporales
+*.log

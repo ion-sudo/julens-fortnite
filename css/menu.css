@@ -1,0 +1,1396 @@
+/* =========================================================
+   FORTNITE CLASH - MENU PRINCIPAL, TIENDA Y TAQUILLA
+   Interfaz en DOM superpuesta al canvas (el escenario del
+   juego se sigue viendo de fondo, con la camara paseando).
+   ========================================================= */
+
+:root {
+  --menu-bg:      rgba(11, 17, 38, 0.82);
+  --menu-panel:   rgba(19, 28, 56, 0.92);
+  --menu-panel-2: rgba(28, 40, 76, 0.92);
+  --menu-border:  rgba(255, 255, 255, 0.16);
+  --menu-gold:    #ffd23f;
+  --menu-blue:    #3f7fe8;
+  --menu-text:    #eaf1ff;
+  --menu-dim:     rgba(234, 241, 255, 0.62);
+}
+
+/* Mostrar el menu solo fuera de la partida, y el HUD solo dentro. */
+#menu-root { display: none; }
+body.in-menu #menu-root { display: flex; }
+body.in-menu #hud-overlay { display: none; }
+
+#menu-root {
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  /* Oscurece el escenario que se ve por detras para que lea bien el texto */
+  background:
+    linear-gradient(180deg, rgba(6, 10, 26, 0.72) 0%, rgba(6, 10, 26, 0.45) 35%, rgba(6, 10, 26, 0.78) 100%);
+  color: var(--menu-text);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------
+   BARRA SUPERIOR
+   --------------------------------------------------------- */
+.menu-topbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px clamp(16px, 3vw, 42px);
+  border-bottom: 2px solid var(--menu-border);
+  background: rgba(8, 13, 30, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.menu-logo {
+  font-size: clamp(20px, 2.6vw, 32px);
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+}
+
+/* Contador de pavos */
+.vbucks {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px 8px 9px;
+  border: 2px solid rgba(255, 210, 63, 0.55);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(43, 58, 106, 0.95), rgba(24, 34, 68, 0.95));
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.vbucks-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #7ee0ff, #2f8fd8);
+  color: #0d2b3d;
+  font-weight: 900;
+  font-size: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.75);
+}
+
+.vbucks-amount {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--menu-gold);
+  min-width: 3ch;
+  text-align: right;
+  transition: transform 0.18s ease;
+}
+
+/* Pequeno "pulso" cuando cambia el saldo */
+.vbucks-amount.bump { transform: scale(1.28); }
+
+.vbucks-label {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--menu-dim);
+}
+
+/* ---------------------------------------------------------
+   PANTALLAS
+   --------------------------------------------------------- */
+.menu-screen {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;                /* imprescindible para que el grid pueda hacer scroll */
+  padding: clamp(12px, 2.2vh, 26px) clamp(16px, 3vw, 42px);
+  animation: screen-in 0.22s ease-out;
+}
+
+.menu-screen.is-active { display: flex; flex-direction: column; }
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---------- INICIO ---------- */
+.home-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 380px) 1fr;
+  gap: clamp(16px, 3vw, 46px);
+  align-items: center;
+}
+
+/* Al anadir MAS JUEGOS pasaron a ser OCHO botones y el ultimo
+   (INSTRUCCIONES) se salia por abajo a 720p. La columna se ajusta ahora
+   a la altura disponible: las separaciones y los tamanos se encogen con
+   `clamp`, y si aun asi no cabe, la lista hace scroll en vez de cortar
+   el ultimo boton. */
+.home-menu {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(5px, 1vh, 10px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+/* Botones principales */
+.btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: clamp(6px, 1vh, 12px) 22px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--menu-panel-2), var(--menu-panel));
+  color: var(--menu-text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.32);
+}
+
+.btn:hover  { transform: translateY(-2px); filter: brightness(1.14); }
+.btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.32); }
+
+.btn-title {
+  font-size: clamp(16px, 1.9vw, 24px);
+  font-weight: 900;
+  letter-spacing: 1.5px;
+}
+
+.btn-sub {
+  font-size: 12px;
+  color: var(--menu-dim);
+  letter-spacing: 0.4px;
+}
+
+/* Ya son NUEVE botones, y con sus subtitulos no caben en una ventana
+   normal. Por debajo de 800 px de alto se quitan los de la columna de
+   inicio (los de dentro de las pantallas se quedan): vale mas ver los
+   nueve de un vistazo que leer la coletilla de cada uno.
+   Y si aun asi no cabe, `.home-menu` hace scroll. */
+@media (max-height: 800px) {
+  .home-menu .btn-sub { display: none; }
+  .home-menu .btn { padding-top: 8px; padding-bottom: 8px; }
+  .home-menu .btn-play { padding-top: 11px; padding-bottom: 11px; }
+}
+
+/* JULEN ROYALE destaca sobre el resto */
+.btn-play {
+  background: linear-gradient(180deg, #6fe25e, #2f9e3f);
+  border-color: rgba(255, 255, 255, 0.5);
+  padding: clamp(10px, 1.7vh, 18px) 24px;
+}
+.btn-play .btn-title { font-size: clamp(21px, 2.6vw, 34px); }
+.btn-play .btn-sub   { color: rgba(255, 255, 255, 0.85); }
+
+/* MAS JUEGOS va justo debajo del boton grande y comparte su familia de
+   color, para que se lea como "lo mismo, pero eligiendo modo". */
+.btn-modes  { background: linear-gradient(180deg, #2f9e3f, #1d6b2c); }
+.btn-profile{ background: linear-gradient(180deg, #d96fa0, #8e2f5c); }
+
+.btn-shop   { background: linear-gradient(180deg, #7a5ce0, #4b32a8); }
+.btn-locker { background: linear-gradient(180deg, #3f8fe8, #2456a8); }
+
+/* Vitrina del personaje */
+.showcase {
+  display: grid;
+  grid-template-columns: 1fr minmax(200px, 300px);
+  align-items: center;
+  gap: clamp(10px, 2vw, 30px);
+  height: 100%;
+  min-height: 0;
+}
+
+.showcase-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 0;
+}
+
+/* Foco de luz detras del personaje */
+.showcase-stage::before {
+  content: '';
+  position: absolute;
+  width: 78%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(90, 150, 255, 0.34) 0%, rgba(90, 150, 255, 0) 68%);
+}
+
+#showcase-canvas {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.showcase-info {
+  background: var(--menu-panel);
+  border: 2px solid var(--menu-border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.4);
+}
+
+.showcase-rarity {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  background: var(--rarity, #b1b6c1);
+  color: #0d1226;
+}
+
+.showcase-name {
+  margin: 8px 0 14px;
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.showcase-gear { display: flex; flex-direction: column; gap: 10px; }
+
+.gear-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.26);
+  border: 1px solid var(--menu-border);
+}
+
+.gear-chip-canvas {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.gear-chip-text { display: flex; flex-direction: column; min-width: 0; }
+
+.gear-chip-label {
+  font-size: 10px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--menu-dim);
+}
+
+.gear-chip-name {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------
+   CABECERA DE TIENDA / TAQUILLA
+   --------------------------------------------------------- */
+.screen-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.screen-title {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 900;
+  letter-spacing: 2px;
+}
+
+.btn-back {
+  padding: 9px 16px;
+  border: 2px solid var(--menu-border);
+  border-radius: 10px;
+  background: var(--menu-panel);
+  color: var(--menu-text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.12s ease;
+}
+.btn-back:hover { filter: brightness(1.3); }
+
+.screen-tabs { display: flex; gap: 8px; margin-left: auto; flex-wrap: wrap; }
+
+.tab {
+  padding: 9px 18px;
+  border: 2px solid var(--menu-border);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--menu-dim);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.tab:hover { color: var(--menu-text); }
+
+.tab.is-active {
+  background: var(--menu-gold);
+  border-color: var(--menu-gold);
+  color: #1a1405;
+}
+
+.tab-count {
+  margin-left: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* ---------------------------------------------------------
+   REJILLA DE OBJETOS
+   --------------------------------------------------------- */
+.item-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  /* max-content evita que la rejilla comprima las filas para llenar su alto
+     (si no, el boton de comprar/equipar se recortaba al final de la tarjeta). */
+  grid-auto-rows: max-content;
+  gap: 14px;
+  padding: 4px 6px 24px 0;
+  align-content: start;
+}
+
+/* Barra de scroll discreta */
+.item-grid::-webkit-scrollbar { width: 10px; }
+.item-grid::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.22); border-radius: 8px; }
+.item-grid::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.24); border-radius: 8px; }
+
+/* Tarjeta de objeto: el color de rareza entra por la variable --rarity */
+.item-card {
+  --rarity: #b1b6c1;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--rarity);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--menu-panel);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
+  transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5);
+}
+
+/* Zona del dibujo, con degradado del color de rareza */
+.item-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 10px 0 4px;
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--rarity) 62%, transparent) 0%, transparent 68%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.25));
+}
+
+.item-art canvas { width: 132px; height: 132px; }
+
+/* Cinta de estado en la esquina (COMPRADO / EQUIPADO) */
+.item-flag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(6, 10, 26, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.item-flag.owned    { color: #7ee06a; border-color: #7ee06a; }
+.item-flag.equipped { background: var(--menu-gold); color: #1a1405; border-color: #fff2b0; }
+
+.item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 12px;
+  flex: 1 1 auto;
+}
+
+.item-rarity {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--rarity);
+}
+
+.item-name {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.item-desc {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--menu-dim);
+  flex: 1 1 auto;
+}
+
+/* Boton de accion de la tarjeta (comprar / equipar) */
+.item-action {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: filter 0.12s ease, transform 0.1s ease;
+}
+
+.item-action:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+
+/* Variantes */
+.item-action.buy      { background: linear-gradient(180deg, #6fe25e, #2f9e3f); color: #08240f; }
+.item-action.equip    { background: linear-gradient(180deg, #3f8fe8, #2456a8); color: #fff; }
+.item-action.equipped { background: var(--menu-gold); color: #1a1405; cursor: default; }
+.item-action.owned    { background: rgba(255, 255, 255, 0.14); color: var(--menu-dim); cursor: default; }
+
+.item-action:disabled { cursor: not-allowed; }
+
+.item-action.cant {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 140, 140, 0.9);
+  border: 1px solid rgba(255, 120, 120, 0.4);
+}
+
+/* Precio dentro del boton */
+.price {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 900;
+}
+
+.price::before {
+  content: 'V';
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #7ee0ff, #2f8fd8);
+  color: #0d2b3d;
+  font-size: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+/* Mensaje cuando la taquilla de una categoria esta vacia */
+.empty-note {
+  grid-column: 1 / -1;
+  padding: 32px;
+  text-align: center;
+  color: var(--menu-dim);
+  border: 2px dashed var(--menu-border);
+  border-radius: 14px;
+}
+
+/* ---------------------------------------------------------
+   INSTRUCCIONES
+   --------------------------------------------------------- */
+.help-panels {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  align-content: start;
+  padding-bottom: 20px;
+}
+
+.help-card {
+  background: var(--menu-panel);
+  border: 2px solid var(--menu-border);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.help-card h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--menu-gold);
+}
+
+.help-card h3 + h3 { margin-top: 18px; }
+
+.key-list { list-style: none; margin: 0; padding: 0; }
+
+.key-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.key-list span { color: var(--menu-dim); margin-left: auto; text-align: right; }
+
+kbd {
+  display: inline-block;
+  min-width: 26px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.13);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-bottom-width: 3px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.help-note { font-size: 13px; line-height: 1.5; color: var(--menu-dim); }
+
+.btn-danger {
+  margin-top: 10px;
+  padding: 9px 16px;
+  border: 2px solid rgba(255, 120, 120, 0.5);
+  border-radius: 10px;
+  background: rgba(180, 50, 50, 0.28);
+  color: #ffc9c9;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.btn-danger:hover { filter: brightness(1.25); }
+
+/* ---------------------------------------------------------
+   AVISO FLOTANTE
+   --------------------------------------------------------- */
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translate(-50%, 24px);
+  padding: 12px 24px;
+  border-radius: 12px;
+  background: rgba(8, 13, 30, 0.95);
+  border: 2px solid var(--menu-gold);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.toast.error { border-color: #ff7a7a; color: #ffc9c9; }
+
+/* ---------------------------------------------------------
+   PANTALLAS ESTRECHAS
+   --------------------------------------------------------- */
+@media (max-width: 900px) {
+  .home-layout { grid-template-columns: 1fr; gap: 14px; }
+  .showcase { grid-template-columns: 1fr; }
+  .showcase-stage { min-height: 180px; }
+  .item-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .item-art canvas { width: 104px; height: 104px; }
+}
+
+/* =============================================================
+   PANTALLA DE MISIONES
+   Una lista por grupos, cada mision con su barra de progreso y su
+   recompensa. Las cumplidas se marcan y se quedan apagadas.
+   ============================================================= */
+
+.btn-missions .btn-title { color: #7ee06a; }
+
+.missions-count {
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(126, 224, 106, 0.14);
+  border: 1px solid rgba(126, 224, 106, 0.5);
+  color: #7ee06a;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.missions-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.mission-group-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mission-group-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 12px;
+}
+
+.mission-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(16, 24, 48, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.mission-card.is-done {
+  border-color: rgba(126, 224, 106, 0.55);
+  background: rgba(24, 44, 30, 0.75);
+}
+
+.mission-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mission-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: #ffffff;
+}
+
+.mission-card.is-done .mission-name { color: #7ee06a; }
+
+.mission-reward {
+  flex: none;
+  font-weight: 700;
+  font-size: 13px;
+  color: #ffd23f;
+  white-space: nowrap;
+}
+
+.mission-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.mission-bar {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+
+.mission-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3f7fe8, #7ee06a);
+  transition: width 0.25s ease;
+}
+
+.mission-card.is-done .mission-bar-fill { background: #7ee06a; }
+
+.mission-foot {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.mission-scope {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  letter-spacing: 0.04em;
+}
+
+.mission-card.is-done .mission-scope { color: #7ee06a; }
+
+/* =============================================================
+   PANTALLA DE MINIJUEGOS
+   Tarjetas grandes con su dibujo, el objetivo y el record.
+   ============================================================= */
+
+.btn-minigames .btn-title { color: #ff8a3d; }
+
+.minigames-hint {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.minigame-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 28px 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 16px;
+}
+
+.minigame-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(13, 20, 42, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid var(--mg-color, #ff8a3d);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.minigame-card.is-ready:hover {
+  transform: translateY(-3px);
+  border-color: var(--mg-color, #ff8a3d);
+}
+
+.minigame-card.is-soon { opacity: 0.62; }
+
+.minigame-stage {
+  align-self: center;
+  width: 108px;
+  height: 108px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+}
+
+.minigame-stage canvas { width: 100px; height: 100px; }
+
+.minigame-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+.minigame-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.62);
+  text-align: center;
+  min-height: 38px;
+}
+
+.minigame-goal {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.8);
+  text-align: center;
+}
+
+.minigame-record {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.minigame-record b { color: #ffd23f; font-size: 14px; }
+
+.minigame-card .item-action { width: 100%; margin-top: 2px; }
+
+.btn-soon {
+  width: 100%;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  cursor: not-allowed;
+}
+
+/* --- Niveles de un minijuego (la carrera de obstaculos) --- */
+
+.minigame-level {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "texto boton" "desc boton";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid var(--lv-color, #5fd14a);
+}
+
+.minigame-level-text {
+  grid-area: texto;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.minigame-level-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--lv-color, #ffffff);
+}
+
+.minigame-level-record {
+  font-weight: 700;
+  font-size: 12.5px;
+  color: #ffd23f;
+}
+
+.minigame-level-desc {
+  grid-area: desc;
+  font-size: 11.5px;
+  line-height: 1.3;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.minigame-level-play {
+  grid-area: boton;
+  padding: 8px 14px;
+  border: 1px solid var(--lv-color, #5fd14a);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--lv-color, #5fd14a);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.minigame-level-play:hover {
+  background: var(--lv-color, #5fd14a);
+  color: #0d142a;
+}
+
+/* =============================================================
+   NIVEL Y BARRA DE EXPERIENCIA (barra superior del menu)
+   ============================================================= */
+
+.level-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  margin-right: 18px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 999px;
+  background: rgba(10, 16, 34, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.level-badge {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7d4fd1, #3f7fe8);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 17px;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.16) inset;
+}
+
+.level-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+
+.level-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.level-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3f7fe8, #7ee06a);
+  transition: width 0.4s ease;
+}
+
+.level-xp {
+  font-size: 11.5px;
+  letter-spacing: 0.03em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.level-box.is-max .level-badge { background: linear-gradient(135deg, #ffd23f, #f5822b); color: #1a1405; }
+.level-box.is-max .level-bar-fill { background: #ffd23f; }
+
+/* =============================================================
+   PASE DE BATALLA
+   Una tarjeta por nivel, con su casilla gratis y su casilla premium.
+   ============================================================= */
+
+.btn-pass .btn-title { color: #ffd23f; }
+
+.pass-state {
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.pass-state.is-premium {
+  background: rgba(255, 210, 63, 0.16);
+  border-color: #ffd23f;
+  color: #ffd23f;
+}
+
+/* --- Cabecera: estado, progreso y boton de compra --- */
+.pass-top {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 0 28px 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  background: rgba(13, 20, 42, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pass-top-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.pass-top-title { font-weight: 800; font-size: 17px; color: #ffffff; }
+.pass-top-note { font-size: 13px; line-height: 1.4; color: rgba(255, 255, 255, 0.6); }
+
+.pass-buy {
+  flex: none;
+  padding: 12px 22px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ffd23f, #f5822b);
+  color: #1a1405;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.pass-buy:hover { filter: brightness(1.08); }
+.pass-buy.is-off { background: rgba(255, 255, 255, 0.1); color: rgba(255,255,255,0.45); cursor: not-allowed; }
+
+/* --- Cuadricula de niveles --- */
+.pass-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 28px 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 12px;
+}
+
+.pass-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 12px;
+  background: rgba(16, 24, 48, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.pass-tier.is-now {
+  border-color: #7ee06a;
+  box-shadow: 0 0 0 2px rgba(126, 224, 106, 0.3);
+}
+
+.pass-tier-num {
+  text-align: center;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pass-tier.is-now .pass-tier-num { color: #7ee06a; }
+
+.pass-slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid transparent;
+}
+
+.pass-slot.is-free    { border-color: rgba(126, 224, 106, 0.35); }
+.pass-slot.is-premium { border-color: rgba(255, 210, 63, 0.35); }
+.pass-slot.is-empty   { opacity: 0.3; }
+
+/* Bloqueada: en gris y con candado */
+.pass-slot.is-locked { filter: grayscale(1) brightness(0.6); }
+.pass-slot.is-locked::after {
+  content: '🔒';
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 11px;
+  filter: none;
+}
+
+.pass-slot canvas { width: 54px; height: 54px; }
+
+.pass-slot-name {
+  font-size: 10.5px;
+  line-height: 1.2;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.75);
+  min-height: 25px;
+}
+
+.pass-slot-tag {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.pass-slot.is-free .pass-slot-tag { color: #7ee06a; }
+.pass-slot.is-premium .pass-slot-tag { color: #ffd23f; }
+
+/* =============================================================
+   SELECTOR DE MODOS (pantalla MAS JUEGOS)
+   Son pocas tarjetas y grandes: cada modo es una partida entera, no
+   un minijuego, asi que la tarjeta tiene sitio para explicarse.
+   ============================================================= */
+
+.mode-grid {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 28px 28px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 18px;
+}
+
+.mode-card {
+  display: grid;
+  grid-template-columns: 116px 1fr;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 16px;
+  background: rgba(13, 20, 42, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid var(--mode-color, #5fd14a);
+  transition: transform 0.14s ease, border-color 0.14s ease;
+}
+
+.mode-card.is-ready:hover {
+  transform: translateY(-3px);
+  border-color: var(--mode-color, #5fd14a);
+}
+
+.mode-card.is-soon { opacity: 0.62; }
+
+.mode-stage {
+  width: 116px;
+  height: 116px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  display: grid;
+  place-items: center;
+}
+
+.mode-stage canvas { width: 104px; height: 104px; }
+
+.mode-body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.mode-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.02em;
+}
+
+.mode-tagline {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mode-color, #5fd14a);
+}
+
+.mode-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+/* Las cuatro senas de identidad, para poder comparar modos de un vistazo */
+.mode-bullets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0;
+}
+
+.mode-bullet {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+}
+
+.mode-card .item-action { width: 100%; margin-top: auto; }
+
+/* =============================================================
+   PANTALLA DE PERFIL
+   Tres bloques apilados: nombre, numeros y emotes.
+   ============================================================= */
+
+.profile-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 28px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-card {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: rgba(13, 20, 42, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.profile-card h3 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.profile-note {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ---------- Nombre ---------- */
+
+.profile-name-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.profile-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(6, 10, 24, 0.8);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.profile-name-input:focus {
+  outline: none;
+  border-color: var(--fc-yellow, #ffd23f);
+}
+
+.profile-name-row .item-action { width: auto; padding-inline: 18px; white-space: nowrap; }
+
+/* ---------- Estadisticas ---------- */
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.profile-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.profile-stat b { font-size: 24px; color: #ffffff; }
+.profile-stat span { font-size: 11.5px; color: rgba(255, 255, 255, 0.55); }
+
+/* Victorias y kills, que son las dos que se miran, mas grandes */
+.profile-stat.is-big { background: rgba(255, 210, 63, 0.10); }
+.profile-stat.is-big b { font-size: 32px; color: var(--fc-yellow, #ffd23f); }
+
+/* ---------- Racha ---------- */
+
+.profile-streak {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.profile-streak > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-streak b { font-size: 26px; color: #ffffff; }
+.profile-streak span { font-size: 11.5px; color: rgba(255, 255, 255, 0.55); }
+
+/* Con racha viva, se enciende */
+.profile-streak.is-hot > div:first-child {
+  background: rgba(255, 138, 61, 0.16);
+  border-color: rgba(255, 138, 61, 0.6);
+}
+.profile-streak.is-hot > div:first-child b { color: #ff8a3d; }
+
+/* ---------- Emotes ---------- */
+
+.emote-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
+}
+
+.emote-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 13px;
+  border-radius: 12px;
+  background: rgba(6, 10, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-top: 3px solid var(--em-color, #8d97a6);
+  opacity: 0.72;
+}
+
+.emote-card.is-owned { opacity: 1; background: rgba(10, 16, 36, 0.92); }
+
+.emote-stage {
+  align-self: center;
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  display: grid;
+  place-items: center;
+}
+
+.emote-stage canvas { width: 64px; height: 64px; }
+
+.emote-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  text-align: center;
+}
+
+.emote-desc {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+  min-height: 32px;
+}
+
+.emote-slot {
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(95, 209, 74, 0.16);
+  border: 1px solid rgba(95, 209, 74, 0.6);
+  color: #b6f5a8;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.emote-card .item-action { width: 100%; margin-top: auto; }
