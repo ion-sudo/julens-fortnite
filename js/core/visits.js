@@ -35,10 +35,19 @@
  * toca.
  */
 const SERVICIO = {
-  hit: 'https://abacus.jasoncameron.dev/hit/julensfortnite/visitas',
-  get: 'https://abacus.jasoncameron.dev/get/julensfortnite/visitas',
+  hit: 'https://abacus.jasoncameron.dev/hit/julensfortnite-battlemundial/visitas',
+  get: 'https://abacus.jasoncameron.dev/get/julensfortnite-battlemundial/visitas',
   leer: (json) => json?.value,
 };
+
+/*
+ * OJO SI HAY QUE EMPEZAR DE CERO OTRA VEZ.
+ * No existe un "borrar" en el servicio: para reiniciar la cuenta se
+ * cambia el nombre del contador (la ultima parte de las dos URLs) por
+ * uno que no haya usado nadie, y el nuevo empieza en cero solo. El
+ * nombre lleva el dominio a proposito, para no chocar con el contador
+ * de otra persona: son claves publicas y compartidas.
+ */
 
 /** Si tarda mas que esto, se deja estar. */
 const TIEMPO_LIMITE = 6000;
