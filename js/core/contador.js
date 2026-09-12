@@ -41,8 +41,8 @@
  * toca.
  */
 const SERVICIO = {
-  hit: 'https://abacus.jasoncameron.dev/hit/julensfortnite-battlemundial/visitas',
-  get: 'https://abacus.jasoncameron.dev/get/julensfortnite-battlemundial/visitas',
+  hit: 'https://abacus.jasoncameron.dev/hit/julensfortnite-battlemundial/jugadores',
+  get: 'https://abacus.jasoncameron.dev/get/julensfortnite-battlemundial/jugadores',
   leer: (json) => json?.value,
 };
 
@@ -59,14 +59,26 @@ const SERVICIO = {
 const TIEMPO_LIMITE = 6000;
 
 /**
- * Marca de "ya te he contado en esta sesion".
+ * Marca de "a ti ya te he contado".
  *
- * Sin esto, recargar la pagina sumaria otra visita, y el vigilante de
- * arranque (js/watchdog.js) recarga solo cuando hace falta: una persona
- * podia contar tres veces. Con sessionStorage se cuenta UNA vez por
- * pestana abierta, que es lo que la gente entiende por "una visita".
+ * OJO CON DONDE SE GUARDA, que es lo que decide QUE se esta contando:
+ *
+ *   sessionStorage  se borra al cerrar la pestana -> cuenta VISITAS.
+ *                   Una misma persona que entra cinco veces suma cinco.
+ *   localStorage    se queda para siempre en ese navegador -> cuenta
+ *                   JUGADORES. Esa persona suma UNO, entre hoy y
+ *                   siempre, aunque vuelva mil veces.
+ *
+ * Va en localStorage porque el cartel dice JUGADORES: la pregunta que
+ * se responde es "cuanta gente ha llegado a jugar", no "cuantas veces
+ * se ha abierto la web".
+ *
+ * Lo que esto NO puede saber: si la misma persona entra desde el movil
+ * y desde el ordenador cuenta dos, y si borra los datos del navegador
+ * vuelve a contar. Para afinar mas haria falta que la gente se
+ * registrase, y eso no lo tiene (ni le hace falta) este juego.
  */
-const CLAVE_SESION = 'fc-visita-contada';
+const CLAVE_CONTADO = 'fc-jugador-contado';
 
 /**
  * Pide el numero y lo entrega.
@@ -76,14 +88,15 @@ const CLAVE_SESION = 'fc-visita-contada';
  *   ensenar y el juego sigue igual.
  */
 export function contarVisita(alRecibir) {
-  let yaContada = false;
-  try { yaContada = sessionStorage.getItem(CLAVE_SESION) === '1'; } catch { /* modo incognito */ }
+  let yaContado = false;
+  try { yaContado = localStorage.getItem(CLAVE_CONTADO) === '1'; } catch { /* modo incognito */ }
 
-  // Si ya se conto en esta pestana, solo se lee el total.
-  const url = yaContada ? SERVICIO.get : SERVICIO.hit;
+  // A quien ya esta contado solo se le lee el total; no vuelve a sumar
+  // por mucho que entre.
+  const url = yaContado ? SERVICIO.get : SERVICIO.hit;
 
-  if (!yaContada) {
-    try { sessionStorage.setItem(CLAVE_SESION, '1'); } catch { /* da igual */ }
+  if (!yaContado) {
+    try { localStorage.setItem(CLAVE_CONTADO, '1'); } catch { /* da igual */ }
   }
 
   pedir(url)
