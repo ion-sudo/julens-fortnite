@@ -551,6 +551,11 @@ export class MatchManager {
     if (porMi) { this.kills++; this.onKill?.(bot); }
     else if (asesino) asesino.kills++;
 
+    // Aviso de baja para TODOS, tambien las de bot contra bot: lo usa la
+    // reaparicion del Julen Recarga, donde cada baja acorta la espera de
+    // los companeros del que ha matado, sea quien sea.
+    if (asesino) this.onAnyKill?.(asesino, bot);
+
     const quien = asesino ? asesino.name : 'la isla';
     this._pushFeed(
       porMi ? `Has eliminado a ${bot.name}` : `${quien} elimino a ${bot.name}`,

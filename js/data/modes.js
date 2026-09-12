@@ -39,8 +39,9 @@
  *   worldLoot   objetos sueltos por el suelo (null = los de CONFIG)
  *   teamSize    tamano de escuadron: 1 = individual, 2 = duos, 4 = escuadron
  *   blitz       si corre el sistema de nivel Blitz y potenciadores
- *   respawn     si los caidos REAPARECEN mientras quede un companero
- *               vivo (modo Julen Recarga, ver systems/reload.js)
+ *   respawn     ajustes de REAPARICION: los caidos vuelven mientras
+ *               quede un companero vivo (ver systems/reload.js).
+ *               null = sin reaparicion, morir es morir
  */
 
 export const MODES = [
@@ -244,9 +245,26 @@ export const MODES = [
       teamSize: 4,
       blitz: false,
 
-      // REAPARICION: lo que hace que este modo sea lo que es. Lo lleva
-      // systems/reload.js; ningun otro modo la tiene.
-      respawn: true,
+      /**
+       * REAPARICION: lo que hace que este modo sea lo que es. Lo lleva
+       * systems/reload.js; ningun otro modo la tiene.
+       *
+       *   time          segundos de espera al caer
+       *   kill/chest/   cuanto RECORTA de la espera de tus companeros
+       *   supply        cada accion util que haces
+       *   lastTeams     con estos equipos o menos, se acaban las
+       *                 segundas oportunidades
+       *   stormProgress lo mismo, pero por tormenta: 0,75 es tres
+       *                 cuartas partes del cierre
+       */
+      respawn: {
+        time: 30,
+        kill: 7,
+        chest: 4,
+        supply: 6,
+        lastTeams: 3,
+        stormProgress: 0.75,
+      },
     },
   },
 ];

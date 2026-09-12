@@ -74,6 +74,7 @@ import { drawMatchHud, drawEndScreen, drawDeploymentHud } from '../ui/matchHud.j
 import { drawWorldMap } from '../ui/worldMap.js';
 import { ReloadManager } from '../systems/reload.js';
 import { drawRespawnHud } from '../ui/reloadHud.js';
+import { Ambience } from '../world/ambience.js';
 
 /**
  * MANDO MUDO. Se le pasa al jugador cuando esta caido esperando a
@@ -107,6 +108,10 @@ export class Game {
     this.player = new Player(this.world);
     // Solo el jugador de verdad hace sonidos de cerca (pasos, salto...).
     this.player.oye = true;
+    // CICLO DIA/NOCHE Y CLIMA. Es permanente (no se recrea cada partida)
+    // porque solo guarda la hora y el clima, y los sortea en cada start.
+    this.ambience = new Ambience();
+
     this.camera = new Camera(this.view.width, this.view.height, this.world);
     this.camera.snapTo(this.player);
     this.mouse = new Mouse(canvas, this.camera);
@@ -236,7 +241,7 @@ export class Game {
     // REAPARICION. Solo el modo que la pide (Julen Recarga); en los
     // demas se queda apagada y morir sigue siendo morir.
     this.reload.player = this.player;
-    this.reload.reset(!!reglas.respawn, {
+    this.reload.reset(reglas.respawn, {
       zone: this.match.zone,
       // Todos los participantes, vivos y caidos: es con los caidos con
       // los que trabaja este sistema.
@@ -259,6 +264,11 @@ export class Game {
     // NIVEL BLITZ, potenciadores y cofres dorados. Solo si el modo lo
     // pide: en el royale este sistema ni se crea.
     this._setupBlitz(reglas);
+
+    // HORA Y CLIMA de esta partida: los dos al azar, y el reloj sigue
+    // corriendo mientras juegas.
+    this.ambience.reset(Math.random, { enabled: true });
+    this.showMessage(this.ambience.descripcion, 'rare');
 
     // Ya sabemos donde ha caido: ahora si se centra la camara.
     this.camera.snapTo(this.player);
@@ -573,14 +583,27 @@ export class Game {
       const zona = zoneAt(this.player.x + this.player.w / 2);
       this._mission(EVENTS.LAND, 1, { zone: zona?.id });
     };
-    this.chests.onOpened = () => { this._mission(EVENTS.CHEST); this._xp('CHEST'); };
+    this.chests.onOpened = (chest, quien) => {
+      this._mission(EVENTS.CHEST);
+      this._xp('CHEST');
+      // JULEN RECARGA: saquear acorta la espera de tus caidos.
+      this.reload.bonus(quien || this.player, 'chest');
+    };
     // Un supply drop cuenta como cofre para las misiones y la XP: es lo
     // mismo, pero mejor y peleado.
     this.supply.onOpened = (drop, quien) => {
+      // Un supply drop vale mas que un cofre porque hay que pelearlo:
+      // esto si cuenta para todos, tambien para los escuadrones de bots.
+      this.reload.bonus(quien, 'supply');
+
       if (quien !== this.player) return;    // los bots no dan XP a nadie
       this._mission(EVENTS.CHEST);
       this._xp('CHEST');
     };
+
+    // JULEN RECARGA: cada baja recorta la espera de los companeros del
+    // que la consigue, sea el jugador o un bot.
+    this.match.onAnyKill = (asesino) => this.reload.bonus(asesino, 'kill');
     // El dano suma XP por cada 100 acumulados, no bala a bala.
     this._danoAcumulado = 0;
     const anotarDano = (dano) => {
@@ -728,6 +751,9 @@ export class Game {
     // Arena: mismo mundo, pero sin bus ni tormenta.
     this.match.startArena(this.minigame.arena);
 
+    // Los minijuegos van siempre de dia: son de entrenar, no de ambiente.
+    this.ambience.reset(Math.random, { enabled: false });
+
     this.minigame.setup();
     this._afterSetup();
     return true;
@@ -840,6 +866,8 @@ export class Game {
     if (frameDt > 0.25) frameDt = 0.25;
 
     this._updateFps(frameDt);
+    // Lo guarda para el dibujo, que va con el delta real (la lluvia).
+    this.frameDt = frameDt;
 
     // La mira debe leerse con la camara del frame anterior ya aplicada.
     if (this.state === 'playing') this.mouse.syncWorld();
@@ -920,6 +948,7 @@ export class Game {
   update(dt) {
     this.time += dt;
     this._ambiente();
+    this.ambience.update(dt);
 
     // En el menu no se simula nada: ni teclado ni raton estan enganchados.
     if (this.state !== 'playing') return;
@@ -1242,11 +1271,15 @@ export class Game {
     ctx.clearRect(0, 0, view.width, view.height);
 
     // --- 1) Fondo (pantalla + parallax) ---
-    drawSky(ctx, view.width, view.height);
+    // La luz del dia apaga o enciende el sol (ver world/ambience.js).
+    const luz = jugando ? 1 - this.ambience.oscuridad : 1;
+    drawSky(ctx, view.width, view.height, luz);
     drawHills(ctx, world, camera);
     drawClouds(ctx, world, camera, this.time);
     // Y encima de todo el fondo, el color del sitio donde estas.
     drawBiomeTint(ctx, view.width, view.height, camera.x + camera.w / 2);
+    // Luna y estrellas: detras del terreno, como el sol.
+    if (jugando) this.ambience.drawCielo(ctx, view, this.time);
 
     // --- 2) Mundo (coordenadas de mundo) ---
     ctx.save();
@@ -1339,6 +1372,14 @@ export class Game {
     }
 
     ctx.restore();
+
+    // --- 2b) La noche y el clima, sobre el mundo ya pintado ---
+    // Va DESPUES del restore y ANTES del HUD: oscurece la isla y a la
+    // gente, pero nunca los numeros de la vida ni el mapa.
+    if (jugando) {
+      this.ambience.drawVelo(ctx, view);
+      this.ambience.drawLluvia(ctx, view, this.frameDt || 0.016);
+    }
 
     // --- 3) HUD (solo durante la partida) ---
     if (jugando) {

@@ -16,6 +16,10 @@
  *   - si mientras esperas cae el ultimo companero, se acabo: el
  *     escuadron entero queda eliminado de verdad
  *   - si os eliminan a todos a la vez, igual: nadie sostiene el respawn
+ *   - HACER COSAS UTILES acorta la espera de tus companeros caidos:
+ *     cada baja y cada cofre les quita segundos del reloj
+ *   - en la FASE FINAL (pocos equipos o tormenta casi cerrada) se acaban
+ *     las segundas oportunidades: a partir de ahi, quien cae no vuelve
  *
  * Esto convive con systems/revive.js sin pisarse, porque son dos
  * escalones distintos de la misma caida:
@@ -33,8 +37,21 @@
 import { areAllies } from './teams.js';
 import { playReward } from '../core/audio.js';
 
-/** Lo que tarda en volver alguien caido. */
-export const RESPAWN_TIME = 30;
+/**
+ * Ajustes por defecto. El modo puede pisarlos uno a uno desde
+ * data/modes.js; esto es solo el respaldo.
+ */
+export const RESPAWN_DEFAULTS = {
+  time: 30,            // segundos de espera
+  kill: 7,             // lo que recorta cada baja
+  chest: 4,            // lo que recorta cada cofre
+  supply: 6,           // lo que recorta cada supply drop
+  lastTeams: 3,        // con estos equipos o menos, se acaba el respawn
+  stormProgress: 0.75, // o con la tormenta asi de cerrada
+};
+
+/** Lo que tarda en volver alguien caido (el valor de referencia). */
+export const RESPAWN_TIME = RESPAWN_DEFAULTS.time;
 
 /** Con cuanta vida vuelves. */
 const RESPAWN_HEALTH = 100;
@@ -62,6 +79,20 @@ export class ReloadManager {
     this.onRespawn = null;
     /** Aviso de escuadron eliminado del todo. */
     this.onTeamOut = null;
+    /** Aviso de que empieza la fase sin reaparicion. */
+    this.onFinalPhase = null;
+
+    /** Ajustes en vigor (los del modo, o los de arriba). */
+    this.cfg = { ...RESPAWN_DEFAULTS };
+
+    /**
+     * FASE FINAL: a partir de aqui ya no se reaparece.
+     *
+     * Es lo que evita que el modo no termine nunca: mientras se pueda
+     * volver, un escuadron aguanta indefinidamente. Llegado el final,
+     * caer vuelve a ser definitivo y la partida se cierra sola.
+     */
+    this.finalPhase = false;
 
     /** El jugador, para saber a quien avisar por pantalla. */
     this.player = null;
@@ -91,14 +122,17 @@ export class ReloadManager {
      ============================================================= */
 
   /**
-   * @param {boolean} enabled  si el modo tiene reaparicion
+   * @param {object|boolean|null} reglas  los ajustes del modo, o
+   *   simplemente true/false para usar los de por defecto
    * @param {object} [opciones] { zone, todos }
    */
-  reset(enabled, opciones = {}) {
-    this.enabled = !!enabled;
+  reset(reglas, opciones = {}) {
+    this.enabled = !!reglas;
+    this.cfg = { ...RESPAWN_DEFAULTS, ...(typeof reglas === 'object' ? reglas : {}) };
     this.zone = opciones.zone || null;
     this.todos = opciones.todos || [];
     this.equiposFuera.clear();
+    this.finalPhase = false;
 
     for (const e of this.todos) ReloadManager.limpiar(e);
   }
@@ -135,7 +169,11 @@ export class ReloadManager {
   sostenido(quien) {
     if (!this.enabled || !quien || quien.respawnOut) return false;
     if (quien.alive) return false;
+    // Al que ya esta contando se le respeta su cuenta atras: se la habia
+    // ganado antes de que se cerrase la veda.
     if (quien.respawnTimer != null) return true;
+    // En la fase final no se abren cuentas atras nuevas.
+    if (this.finalPhase) return false;
     return this._tieneApoyo(quien, this.todos);
   }
 
@@ -154,14 +192,34 @@ export class ReloadManager {
    * @returns {number} a cuantos companeros ha ayudado
    */
   speedUp(quien, segundos) {
-    if (!this.enabled || segundos <= 0) return 0;
+    if (!this.enabled || !quien || segundos <= 0) return 0;
+
     let n = 0;
     for (const e of this.todos) {
       if (!this.isPending(e) || !areAllies(quien, e)) continue;
+      // Nunca por debajo de un pelin: si no, una racha de bajas haria
+      // aparecer al companero en el sitio en el que acabas de pelear.
       e.respawnTimer = Math.max(0.6, e.respawnTimer - segundos);
       n++;
     }
+
+    // Solo se avisa por lo tuyo: 40 personas saqueando llenarian la
+    // pantalla de mensajes que no son para ti.
+    if (n > 0 && quien === this.player) {
+      const quienes = n === 1 ? 'tu companero' : `tus ${n} companeros`;
+      this.onMessage?.(`-${segundos} s para ${quienes}`, 'rare');
+    }
     return n;
+  }
+
+  /**
+   * Atajo para las acciones con nombre: `bonus(quien, 'kill')`.
+   * Asi los sitios que las provocan no tienen que saber cuantos
+   * segundos vale cada cosa.
+   * @param {'kill'|'chest'|'supply'} accion
+   */
+  bonus(quien, accion) {
+    return this.speedUp(quien, this.cfg[accion] || 0);
   }
 
   /* =============================================================
@@ -173,14 +231,19 @@ export class ReloadManager {
     if (!this.enabled) return;
     const todos = this.todos;
 
+    this._revisarFaseFinal();
+
     for (const e of todos) {
       if (e.alive) continue;
       if (e.respawnOut) continue;          // ya esta fuera del todo
 
       // --- Acaba de caer: ¿le sostiene alguien? ---
+      // En la fase final ya no se abren cuentas atras nuevas, por muchos
+      // companeros en pie que le queden: es la misma regla que aplica
+      // `sostenido`, y las dos tienen que decir lo mismo.
       if (e.respawnTimer == null) {
-        if (this._tieneApoyo(e, todos)) {
-          e.respawnTimer = RESPAWN_TIME;
+        if (!this.finalPhase && this._tieneApoyo(e, todos)) {
+          e.respawnTimer = this.cfg.time;
           this._avisarCaida(e);
         } else {
           this._eliminar(e, todos);
@@ -200,6 +263,38 @@ export class ReloadManager {
   }
 
   /**
+   * ¿Se han acabado ya las segundas oportunidades?
+   *
+   * Se cierra la veda por cualquiera de los dos caminos, lo que llegue
+   * antes: quedan pocos escuadrones, o la tormenta ya esta casi cerrada.
+   * Hacen falta los dos porque no siempre van juntos: a veces quedan
+   * tres equipos con la tormenta a medias, y a veces siguen siete con
+   * la zona reducida a un pasillo.
+   *
+   * Una vez encendida no se apaga: la recta final no vuelve atras.
+   */
+  _revisarFaseFinal() {
+    if (this.finalPhase) return;
+
+    const porTormenta = this.zone ? this.zone.progress >= this.cfg.stormProgress : false;
+    const porEquipos = this._equiposEnJuego() <= this.cfg.lastTeams;
+    if (!porTormenta && !porEquipos) return;
+
+    this.finalPhase = true;
+    this.onFinalPhase?.(porTormenta ? 'tormenta' : 'equipos');
+    this.onMessage?.('ULTIMA RONDA · ya no se reaparece', 'legendary');
+  }
+
+  /** Escuadrones que siguen en la partida (vivos o esperando a volver). */
+  _equiposEnJuego() {
+    const equipos = new Set();
+    for (const e of this.todos) {
+      if (this.inPlay(e) && e.team !== undefined) equipos.add(e.team);
+    }
+    return equipos.size;
+  }
+
+  /**
    * ¿Queda alguien de su equipo EN PIE para sostener la reaparicion?
    *
    * Un companero ABATIDO cuenta: sigue vivo y pueden levantarlo. Uno
@@ -216,9 +311,9 @@ export class ReloadManager {
 
   _avisarCaida(e) {
     if (e === this.player) {
-      this.onMessage?.(`Vuelves en ${RESPAWN_TIME} s · aguanta, equipo`, 'rare');
+      this.onMessage?.(`Vuelves en ${Math.round(this.cfg.time)} s · aguanta, equipo`, 'rare');
     } else if (areAllies(e, this.player)) {
-      this.onMessage?.(`${e.name} ha caido · vuelve en ${RESPAWN_TIME} s`, 'uncommon');
+      this.onMessage?.(`${e.name} ha caido · vuelve en ${Math.round(this.cfg.time)} s`, 'uncommon');
     }
   }
 

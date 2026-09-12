@@ -11,7 +11,9 @@
  * que nadie la explique: se ve cuanto falta y se ve que el mundo sigue.
  */
 
-import { RESPAWN_TIME } from '../systems/reload.js';
+
+
+import { roundRectPath } from '../core/utils.js';
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -21,7 +23,13 @@ import { RESPAWN_TIME } from '../systems/reload.js';
  * @param {number} time  reloj del juego, para los pulsos
  */
 export function drawRespawnHud(ctx, player, reload, view, time) {
-  const queda = reload?.timeLeft(player);
+  if (!reload?.enabled) return;
+
+  // El aviso de que se han acabado las segundas oportunidades va
+  // siempre, estes vivo o caido.
+  if (reload.finalPhase) drawSinRespawn(ctx, view, time);
+
+  const queda = reload.timeLeft(player);
   if (queda == null) return;
 
   const pulso = 0.65 + 0.35 * Math.sin(time * 4);
@@ -41,7 +49,8 @@ export function drawRespawnHud(ctx, player, reload, view, time) {
 
   // --- El anillo que se llena ---
   const R = 62;
-  const progreso = 1 - Math.max(0, Math.min(1, queda / RESPAWN_TIME));
+  const total = reload.cfg?.time || 30;
+  const progreso = 1 - Math.max(0, Math.min(1, queda / total));
 
   ctx.lineWidth = 9;
   ctx.strokeStyle = 'rgba(255,255,255,0.14)';
@@ -73,6 +82,43 @@ export function drawRespawnHud(ctx, player, reload, view, time) {
   ctx.strokeText('Tu escuadron te sostiene: aguantad', cx, cy + R + 30);
   ctx.fillStyle = 'rgba(255,255,255,0.85)';
   ctx.fillText('Tu escuadron te sostiene: aguantad', cx, cy + R + 30);
+
+  ctx.restore();
+}
+
+/* =============================================================
+   ULTIMA RONDA
+   -------------------------------------------------------------
+   A partir de cierto punto (pocos equipos o tormenta casi cerrada)
+   se acaba la reaparicion. Hay que decirlo bien claro: cambia por
+   completo como se juega, porque de repente arriesgarse cuesta la
+   partida entera.
+   ============================================================= */
+
+function drawSinRespawn(ctx, view, time) {
+  const pulso = 0.55 + 0.45 * Math.sin(time * 3.2);
+  const texto = 'SIN REAPARICION';
+
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const cx = view.width / 2;
+  const y = 78;
+
+  ctx.font = 'bold 15px "Trebuchet MS", sans-serif';
+  const ancho = ctx.measureText(texto).width + 34;
+
+  // Chapa de fondo, para que se lea sobre cualquier cielo.
+  ctx.fillStyle = `rgba(150, 25, 60, ${0.55 + 0.25 * pulso})`;
+  roundRectPath(ctx, cx - ancho / 2, y - 15, ancho, 30, 15);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(255, 120, 170, ${0.7 + 0.3 * pulso})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(texto, cx, y + 1);
 
   ctx.restore();
 }

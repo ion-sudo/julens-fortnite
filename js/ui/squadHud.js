@@ -16,7 +16,7 @@
 import { roundRectPath } from '../core/utils.js';
 import { TEAM_COLORS } from '../systems/teams.js';
 import { REVIVE_TIME } from '../systems/revive.js';
-import { RESPAWN_TIME } from '../systems/reload.js';
+
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -189,7 +189,7 @@ function drawSquadList(ctx, match, view, reload = null) {
     let ratio;
     let colorBarra;
     if (volviendo != null) {
-      ratio = 1 - Math.max(0, Math.min(1, volviendo / RESPAWN_TIME));
+      ratio = 1 - Math.max(0, Math.min(1, volviendo / (reload.cfg?.time || 30)));
       colorBarra = '#ff5fa2';
     } else if (b.downed) {
       ratio = Math.max(0, b.downHealth / b.maxDownHealth);

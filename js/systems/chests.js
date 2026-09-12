@@ -198,7 +198,7 @@ export class ChestManager {
   /** Abre un cofre y suelta su botin. */
   openChest(chest, player) {
     if (!chest.open()) return;
-    this.onOpened?.(chest);
+    this.onOpened?.(chest, player);
 
     playChestOpen();
 

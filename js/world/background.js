@@ -80,8 +80,15 @@ export function drawBiomeTint(ctx, viewW, viewH, worldX) {
   ctx.globalAlpha = 1;
 }
 
-/** Degradado de cielo. Se dibuja en coordenadas de PANTALLA (fijo). */
-export function drawSky(ctx, viewW, viewH) {
+/**
+ * Degradado de cielo. Se dibuja en coordenadas de PANTALLA (fijo).
+ *
+ * @param {number} [luz]  cuanta luz de dia hay, de 0 (noche cerrada) a
+ *   1 (pleno dia). Lo manda el ciclo dia/noche (world/ambience.js) y
+ *   sirve para APAGAR EL SOL: dejarlo encendido a medianoche, aunque el
+ *   velo azul lo tapase a medias, cantaba muchisimo.
+ */
+export function drawSky(ctx, viewW, viewH, luz = 1) {
   const g = ctx.createLinearGradient(0, 0, 0, viewH);
   g.addColorStop(0.0, PALETTE.skyTop);
   g.addColorStop(0.55, PALETTE.skyMid);
@@ -89,19 +96,25 @@ export function drawSky(ctx, viewW, viewH) {
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, viewW, viewH);
 
-  // Sol con halo suave, arriba a la derecha.
+  // Sol con halo suave, arriba a la derecha. Se apaga por la noche.
+  const brillo = Math.max(0, Math.min(1, luz));
+  if (brillo <= 0.02) return;
+
   const sunX = viewW * 0.82;
-  const sunY = viewH * 0.16;
+  // Segun baja la luz, el sol tambien BAJA hacia el horizonte: es lo
+  // que hace que un atardecer parezca un atardecer.
+  const sunY = viewH * (0.16 + (1 - brillo) * 0.42);
+
   const halo = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 190);
-  halo.addColorStop(0, 'rgba(255, 244, 190, 0.95)');
-  halo.addColorStop(0.35, 'rgba(255, 236, 160, 0.35)');
+  halo.addColorStop(0, `rgba(255, 244, 190, ${0.95 * brillo})`);
+  halo.addColorStop(0.35, `rgba(255, 236, 160, ${0.35 * brillo})`);
   halo.addColorStop(1, 'rgba(255, 236, 160, 0)');
   ctx.fillStyle = halo;
   ctx.beginPath();
   ctx.arc(sunX, sunY, 190, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.fillStyle = '#fff6c8';
+  ctx.fillStyle = `rgba(255, 246, 200, ${brillo})`;
   ctx.beginPath();
   ctx.arc(sunX, sunY, 46, 0, Math.PI * 2);
   ctx.fill();
