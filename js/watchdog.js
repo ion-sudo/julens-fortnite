@@ -14,15 +14,29 @@
  *
  * Que hace:
  *   1. apunta todos los errores desde el primer instante
- *   2. a los 2 segundos comprueba si el juego ha arrancado (window.FC)
+ *   2. cuando la pagina TERMINA DE CARGAR, espera un momento y comprueba
+ *      si el juego ha arrancado (window.FC)
  *   3. si no, recarga UNA vez saltandose la cache (que arregla el 99 %)
  *   4. si tras el reintento sigue sin arrancar, ensena el error en pantalla
+ *
+ * OJO CON EL MOMENTO DE COMPROBAR. Antes se miraba a los 2 segundos a
+ * secas. En localhost sobra de largo, pero el juego son 113 modulos y en
+ * un servidor de verdad (o en un movil con mala cobertura) son 113
+ * peticiones que no caben en 2 segundos: el vigilante daba por muerto un
+ * juego que estaba cargando perfectamente, recargaba, y volvia a fallar.
+ *
+ * La senal buena no es un reloj, es el evento `load`: salta cuando el
+ * navegador ya ha traido y enlazado todo. Si para entonces el juego no
+ * ha arrancado, es que de verdad ha pasado algo.
  */
 (function () {
   'use strict';
 
   var CLAVE_REINTENTO = 'fc-reintento-cache';
-  var ESPERA_MS = 2000;
+  /** Margen tras el `load` para que main.js termine de montarlo todo. */
+  var ESPERA_TRAS_CARGA = 3000;
+  /** Tope absoluto, por si el evento `load` no llegase nunca. */
+  var TOPE_MS = 25000;
 
   var errores = [];
 
@@ -127,9 +141,13 @@
     };
   }
 
-  /** Comprobacion pasado el margen de carga. */
-  setTimeout(function () {
-    if (window.FC) return;   // ha arrancado bien
+  /** Comprobacion pasado el margen de carga. Solo se hace una vez. */
+  var yaComprobado = false;
+
+  function comprobar() {
+    if (yaComprobado) return;
+    if (window.FC) { yaComprobado = true; return; }   // ha arrancado bien
+    yaComprobado = true;
 
     var yaReintentado = false;
     try { yaReintentado = sessionStorage.getItem(CLAVE_REINTENTO) === '1'; } catch (e) {}
@@ -138,11 +156,23 @@
       // Primer intento: casi siempre es cache mezclada, asi que se
       // recarga sola sin molestar al jugador.
       try { sessionStorage.setItem(CLAVE_REINTENTO, '1'); } catch (e) {}
-      console.warn('[FORTNITE CLASH] No ha arrancado; recargando sin cache...');
+      console.warn("[JULEN'S FORTNITE] No ha arrancado; recargando sin cache...");
       recargarSinCache();
       return;
     }
 
     mostrarPanel();
-  }, ESPERA_MS);
+  }
+
+  // La cuenta empieza cuando ya esta todo descargado y enlazado.
+  if (document.readyState === 'complete') {
+    setTimeout(comprobar, ESPERA_TRAS_CARGA);
+  } else {
+    window.addEventListener('load', function () {
+      setTimeout(comprobar, ESPERA_TRAS_CARGA);
+    });
+  }
+
+  // Red de seguridad por si el `load` se queda colgado esperando algo.
+  setTimeout(comprobar, TOPE_MS);
 })();
