@@ -1394,3 +1394,46 @@ kbd {
 }
 
 .emote-card .item-action { width: 100%; margin-top: auto; }
+
+/* =============================================================
+   CONTADOR DE VISITAS (js/core/visits.js)
+   Mismo aire que el marcador de pavos, pero apagado: es un dato
+   curioso, no algo con lo que se juegue.
+   ============================================================= */
+
+.visitas {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 38, 0.55);
+  white-space: nowrap;
+}
+
+.visitas.hidden { display: none; }
+
+.visitas-icon {
+  font-size: 14px;
+  filter: grayscale(0.2);
+}
+
+.visitas-amount {
+  font-size: 16px;
+  font-weight: 900;
+  color: #8fd9ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.visitas-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* En pantallas estrechas, el numero se basta solo. */
+@media (max-width: 900px) {
+  .visitas-label { display: none; }
+}

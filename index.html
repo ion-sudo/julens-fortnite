@@ -72,6 +72,17 @@
           </div>
         </div>
 
+        <!--
+          CONTADOR DE VISITAS. Empieza oculto y solo aparece si el
+          servicio contesta (ver js/core/visits.js): si esta caido, no
+          se ensena un hueco vacio ni un "cargando..." eterno.
+        -->
+        <div class="visitas hidden" id="visitas-display" title="Gente que ha entrado a jugar">
+          <span class="visitas-icon">&#128100;</span>
+          <span class="visitas-amount" id="visitas-amount">0</span>
+          <span class="visitas-label">jugadores</span>
+        </div>
+
         <div class="vbucks" id="vbucks-display" title="Pavos">
           <span class="vbucks-icon">V</span>
           <span class="vbucks-amount" id="vbucks-amount">0</span>

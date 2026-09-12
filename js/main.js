@@ -21,6 +21,7 @@ import { Menu } from './ui/menu.js';
 import { showFatalError, watchRuntimeErrors } from './core/boot.js';
 import { BootScreen } from './ui/bootScreen.js';
 import { AudioPanel } from './ui/audioPanel.js';
+import { contarVisita, formatear } from './core/visits.js';
 
 const canvas = document.getElementById('game-canvas');
 
@@ -158,6 +159,17 @@ function arrancar() {
 
   // Expuesto en consola para depurar comodamente.
   window.FC = { game, menu, profile, CONFIG, portada, audioPanel };
+
+  // CONTADOR DE VISITAS. Va lo ultimo y sin esperar a nada: si el
+  // servicio tarda o esta caido, el juego ya esta funcionando y el
+  // contador simplemente no aparece.
+  contarVisita((total) => {
+    const caja = document.getElementById('visitas-display');
+    const numero = document.getElementById('visitas-amount');
+    if (!caja || !numero) return;
+    numero.textContent = formatear(total);
+    caja.classList.remove('hidden');
+  });
 
   // Avisa al vigilante de arranque de que todo ha ido bien.
   if (window.__fcArrancado) window.__fcArrancado();
