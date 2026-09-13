@@ -18,6 +18,7 @@
 
 import { ZIPLINES, JUMP_PADS, ZIP_SPEED, ZIP_GRAB } from '../data/mobility.js';
 import { ZONES } from '../data/zones.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 /** Tiempo sin poder volver a engancharse tras soltarse. */
 const REENGANCHE = 0.45;
@@ -281,7 +282,7 @@ export class MobilityManager {
         : (t < 0.5 ? 1 : -1);
 
       this.riding = { line: L, t, dir };
-      this.onMessage?.('¡Tirolina! Espacio para soltarte', 'uncommon');
+      this.onMessage?.(`¡Tirolina! ${control('jump')} para soltarte`, 'uncommon');
       this.particles?.puff(cx, cy, 'rgba(255,255,255,0.5)', 5);
       return;
     }

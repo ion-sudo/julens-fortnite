@@ -15,6 +15,7 @@
 import { Minigame } from './base.js';
 import { CONFIG } from '../../core/config.js';
 import { roundRectPath } from '../../core/utils.js';
+import { control, segunControl } from '../../ui/controlHints.js';
 
 /** Por debajo de esta madera se vuelve a llenar (nunca se acaba). */
 const MINIMO = 600;
@@ -63,7 +64,10 @@ export class Sandbox extends Minigame {
     this.player.buildMode = true;
     this.player.piece = 'rampa';
 
-    this.game.showMessage('Madera infinita · Q sale del modo · Z pared · X suelo · C rampa', 'legendary');
+    this.game.showMessage(segunControl(
+      'Madera infinita · Q sale del modo · Z pared · X suelo · C rampa',
+      'Madera infinita · CONSTRUIR y luego PARED, SUELO o RAMPA'
+    ), 'legendary');
   }
 
   step(dt) {

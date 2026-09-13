@@ -16,6 +16,7 @@
 import { roundRectPath } from '../core/utils.js';
 import { TEAM_COLORS } from '../systems/teams.js';
 import { REVIVE_TIME } from '../systems/revive.js';
+import { control, segunControl } from './controlHints.js';
 
 
 /**
@@ -121,7 +122,7 @@ function drawRevivePrompt(ctx, caido, view) {
 
   ctx.font = 'bold 13px "Trebuchet MS", sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(`MANTEN  E  PARA LEVANTAR A ${caido.name || 'TU COMPANERO'}`, cx, y + 17);
+  ctx.fillText(`MANTEN  ${control('pickup')}  PARA LEVANTAR A ${caido.name || 'TU COMPANERO'}`, cx, y + 17);
 
   // Barra: se llena mientras aguantas la E y se vacia si la sueltas.
   const bw = w - 28;

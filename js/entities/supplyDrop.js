@@ -19,6 +19,7 @@
 
 import { roundRectPath } from '../core/utils.js';
 import { playSupplyLandAt } from '../core/audio.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 /** Lo que baja por segundo (despacio, para que de tiempo a llegar). */
 const CAIDA = 105;
@@ -248,7 +249,7 @@ export class SupplyDrop {
   drawPrompt(ctx) {
     if (!this.canOpen) return;
 
-    const texto = 'E  ·  SUMINISTROS';
+    const texto = `${control('pickup')}  ·  SUMINISTROS`;
     ctx.save();
     ctx.font = 'bold 13px "Trebuchet MS", sans-serif';
     const ancho = ctx.measureText(texto).width + 24;

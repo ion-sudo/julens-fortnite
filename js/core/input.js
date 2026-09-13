@@ -43,6 +43,8 @@ export class Input {
 
     this.down = new Set();     // acciones mantenidas
     this.pressed = new Set();  // acciones pulsadas este frame
+    /** Acciones apretadas desde la pantalla tactil (ver pressVirtual). */
+    this.virtual = new Set();
 
     this._onKeyDown = this._onKeyDown.bind(this);
     this._onKeyUp = this._onKeyUp.bind(this);
@@ -51,6 +53,12 @@ export class Input {
 
   /** Engancha los listeners globales. */
   attach(target = window) {
+    // Una partida nueva empieza SIN NADA PULSADO. Sin esto, un toque de
+    // la pantalla hecho fuera de partida ("Salir" justo cuando acababa)
+    // se quedaba guardado, porque en el menu nadie lo gasta, y sacaba al
+    // menu la partida siguiente en su primer frame.
+    this._onBlur();
+    this.virtual.clear();
     target.addEventListener('keydown', this._onKeyDown);
     target.addEventListener('keyup', this._onKeyUp);
     target.addEventListener('blur', this._onBlur);
@@ -60,6 +68,9 @@ export class Input {
     target.removeEventListener('keydown', this._onKeyDown);
     target.removeEventListener('keyup', this._onKeyUp);
     target.removeEventListener('blur', this._onBlur);
+    // Y al salir de la partida, tampoco se lleva nada pulsado.
+    this._onBlur();
+    this.virtual.clear();
   }
 
   /**
@@ -106,6 +117,39 @@ export class Input {
   _onBlur() {
     this.down.clear();
     this.pressed.clear();
+  }
+
+  /* =============================================================
+     TECLAS VIRTUALES (controles tactiles, ui/touchControls.js)
+     -------------------------------------------------------------
+     Un boton en pantalla hace EXACTAMENTE lo mismo que su tecla: en vez
+     de inventarse otra forma de saltar o construir, "pulsa" la misma
+     accion. El resto del juego sigue leyendo isDown('jump') y no sabe
+     si ha sido un dedo o el teclado.
+     ============================================================= */
+
+  /** Aprieta una accion, como pulsar su tecla y dejarla pulsada. */
+  pressVirtual(action) {
+    if (!this.down.has(action)) this.pressed.add(action);
+    this.down.add(action);
+    this.virtual.add(action);
+  }
+
+  /** La suelta. */
+  releaseVirtual(action) {
+    this.virtual.delete(action);
+    this.down.delete(action);
+  }
+
+  /** Un toque: cuenta como pulsada este frame (lo que se lee con consume). */
+  tapVirtual(action) {
+    this.pressed.add(action);
+  }
+
+  /** Suelta todo lo apretado desde la pantalla. */
+  releaseAllVirtual() {
+    for (const a of this.virtual) this.down.delete(a);
+    this.virtual.clear();
   }
 
   isDown(action) { return this.down.has(action); }

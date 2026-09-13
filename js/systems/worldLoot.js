@@ -16,6 +16,7 @@ import { rollLoot } from '../data/loot.js';
 import { ammoInfo } from '../data/ammo.js';
 import { PICKAXE_SLOT } from '../core/inventory.js';
 import { playPickup } from '../core/audio.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 /** Separacion minima entre dos objetos del suelo. */
 const MIN_GAP = 150;
@@ -168,7 +169,10 @@ export class LootManager {
     if (pickup.item.kind === 'throwable' && !this._avisoGranada) {
       this._avisoGranada = true;
       this.onMessage?.(
-        `${nombre} — pulsa ${res.slot} para equiparla y clic izquierdo para lanzarla`,
+        segunControl(
+          `${nombre} — pulsa ${res.slot} para equiparla y clic izquierdo para lanzarla`,
+          `${nombre} — toca su ranura y luego LANZAR`
+        ),
         pickup.item.rarity
       );
       return;
@@ -180,7 +184,7 @@ export class LootManager {
   /** Intercambia el objeto del suelo por el de la ranura equipada. */
   _swap(pickup, player) {
     if (this.inventory.selected === PICKAXE_SLOT) {
-      this.onMessage?.('Selecciona una ranura de objeto (1-5) para cambiar');
+      this.onMessage?.(segunControl('Selecciona una ranura de objeto (1-5) para cambiar', 'Toca una ranura de objeto para cambiar'));
       return;
     }
 

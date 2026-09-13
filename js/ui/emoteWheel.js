@@ -14,6 +14,7 @@
 import { roundRectPath } from '../core/utils.js';
 import { rarityColor } from '../data/rarities.js';
 import { WHEEL_SLOTS } from '../data/emotes.js';
+import { control, segunControl } from './controlHints.js';
 
 const RADIO = 132;      // del centro al medio del sector
 const GROSOR = 74;      // ancho de cada sector
@@ -121,7 +122,7 @@ function dibujarRueda(ctx, emotes, view, time) {
   ctx.fillText('EMOTES', 0, -2);
   ctx.font = '10px "Trebuchet MS", sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
-  ctx.fillText('B para cerrar', 0, 14);
+  ctx.fillText(segunControl('B para cerrar', 'BAILES para cerrar'), 0, 14);
 
   ctx.restore();
 }

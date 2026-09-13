@@ -957,8 +957,11 @@ function nearestEnemy(bot, enemies, range) {
 /**
  * ¿Hay linea de tiro? Se muestrean unos puntos entre los dos y se mira
  * si alguno cae dentro de una plataforma solida. Barato y suficiente.
+ *
+ * Exportada: tambien la usa el disparo automatico de los controles
+ * tactiles, para no disparar a alguien que esta detras de una pared.
  */
-function hasLineOfSight(a, b, world) {
+export function hasLineOfSight(a, b, world) {
   const ax = a.x + a.w / 2;
   const ay = a.y + a.h * 0.4;
   const bx = b.x + b.w / 2;

@@ -18,6 +18,7 @@ import { Vehicle } from '../entities/vehicle.js';
 import { VEHICLE_SPAWNS } from '../data/vehicles.js';
 import { ZONES } from '../data/zones.js';
 import { roundRectPath } from '../core/utils.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 export class VehicleManager {
   /**
@@ -181,7 +182,7 @@ export class VehicleManager {
     player.buildMode = false;
 
     this.particles?.puff(v.centerX, v.centerY, 'rgba(255,255,255,0.45)', 6);
-    this.onMessage?.(`${v.def.label} · V para bajar`, 'uncommon');
+    this.onMessage?.(`${v.def.label} · ${segunControl('V', 'BAJAR')} para bajar`, 'uncommon');
   }
 
   _bajar(player) {
@@ -314,7 +315,7 @@ export class VehicleManager {
 
     const x = v.centerX;
     const y = v.y - 34;
-    const texto = `V para subir · ${v.def.label}`;
+    const texto = `${control('vehicle')} para subir · ${v.def.label}`;
 
     ctx.save();
     ctx.font = 'bold 13px "Trebuchet MS", sans-serif';

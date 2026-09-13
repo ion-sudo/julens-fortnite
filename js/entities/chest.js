@@ -19,6 +19,7 @@
  */
 
 import { CONFIG } from '../core/config.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 /** Los dos aspectos del cofre: el normal de madera y el dorado. */
 const MADERA = {
@@ -226,7 +227,7 @@ export class Chest {
 
   /** Cartel "E para abrir" encima del cofre. */
   drawPrompt(ctx) {
-    const texto = 'E para abrir';
+    const texto = `${control('pickup')} para abrir`;
     const y = this.groundY - 74;
 
     ctx.save();

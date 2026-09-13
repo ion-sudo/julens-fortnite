@@ -10,6 +10,8 @@
  * Todo en coordenadas de PANTALLA, encima del resto del HUD.
  */
 
+import { control, segunControl } from './controlHints.js';
+
 const PANEL_W = 178;
 
 /**
@@ -153,7 +155,7 @@ export function drawDeploymentHud(ctx, player, match, view, time) {
   if (fase === 'bus') {
     // Cartel grande con la tecla de salto
     const pulso = 0.75 + 0.25 * Math.sin(time * 4);
-    const texto = 'PULSA ESPACIO PARA SALTAR';
+    const texto = segunControl('PULSA ESPACIO PARA SALTAR', 'TOCA SALTAR PARA TIRARTE');
 
     ctx.font = 'bold 30px "Trebuchet MS", sans-serif';
     const ancho = ctx.measureText(texto).width + 56;
@@ -206,7 +208,7 @@ export function drawDeploymentHud(ctx, player, match, view, time) {
     if (!planeando) {
       ctx.font = 'bold 14px "Trebuchet MS", sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.fillText('ESPACIO para abrir la paravela', view.width / 2, 170);
+      ctx.fillText(`${control('jump')} para abrir la paravela`, view.width / 2, 170);
     }
 
     ctx.font = 'bold 13px "Trebuchet MS", sans-serif';
@@ -291,7 +293,7 @@ export function drawEndScreen(ctx, match, view, time) {
   // Pie
   ctx.font = 'bold 14px "Trebuchet MS", sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.62)';
-  ctx.fillText('Pulsa ESC o haz clic para volver al menu', cx, cy + ph / 2 - 22);
+  ctx.fillText(segunControl('Pulsa ESC o haz clic para volver al menu', 'Toca la pantalla para volver al menu'), cx, cy + ph / 2 - 22);
 
   ctx.restore();
 }

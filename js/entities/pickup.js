@@ -20,6 +20,7 @@ import { ammoInfo } from '../data/ammo.js';
 import { CONFIG } from '../core/config.js';
 import { bodyAt } from '../world/water.js';
 import { roundRectPath } from '../core/utils.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 /** Radio (px) dentro del cual se puede recoger. */
 export const PICKUP_RADIUS = 46;
@@ -172,7 +173,7 @@ export class Pickup {
     const nombre = esMunicion
       ? `${this.item.name} x${this.item.amount}`
       : this.item.name + (this.item.count > 1 ? ` x${this.item.count}` : '');
-    const pie = lleno ? 'E para cambiar' : 'E para recoger';
+    const pie = `${control('pickup')} para ${lleno ? 'cambiar' : 'recoger'}`;
 
     ctx.save();
     ctx.font = 'bold 13px "Trebuchet MS", sans-serif';

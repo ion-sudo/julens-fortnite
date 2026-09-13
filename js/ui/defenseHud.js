@@ -15,6 +15,7 @@ import { roundRectPath } from '../core/utils.js';
 import { rarityColor } from '../data/rarities.js';
 import { findWeapon } from '../data/weapons.js';
 import { DEFENSA, TORRES, TRAMPAS, TIENDA_ARMAS } from '../data/defense.js';
+import { control, segunControl } from './controlHints.js';
 
 const FUENTE = '"Trebuchet MS", sans-serif';
 const PANEL = { w: 820, h: 480 };
@@ -123,7 +124,7 @@ function panelOleada(ctx, m) {
   } else {
     ctx.fillStyle = '#ffd76a';
     const s = Math.max(0, Math.ceil(m.cuenta));
-    ctx.fillText(`DIA · la oleada ${m.oleada + 1} llega en ${s} s · P para empezar ya`, x + 16, y + 49);
+    ctx.fillText(`DIA · la oleada ${m.oleada + 1} llega en ${s} s · ${control('ready')} para empezar ya`, x + 16, y + 49);
   }
 
   // Vida de la torre
@@ -141,7 +142,7 @@ function panelOleada(ctx, m) {
   ctx.fillText(`TORRE ${Math.ceil(m.base.vida)} / ${m.base.vidaMax}`, bx, by + 25);
   ctx.textAlign = 'right';
   ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-  ctx.fillText('T tienda · G mejorar · P empezar', bx + bw, by + 25);
+  ctx.fillText(segunControl('T tienda · G mejorar · P empezar', 'Botones TIENDA · MEJORAR · EMPEZAR'), bx + bw, by + 25);
 }
 
 function panelDinero(ctx, m) {
@@ -208,7 +209,10 @@ function cajaAyuda(ctx, view, lineas, color) {
 
 function ayudaColocar(ctx, m, view) {
   const c = m.colocando;
-  const lineas = [`Clic: colocar ${c.def.name} ($${c.def.precio}) · clic derecho: cancelar`];
+  const lineas = [segunControl(
+    `Clic: colocar ${c.def.name} ($${c.def.precio}) · clic derecho: cancelar`,
+    `Toca el camino: colocar ${c.def.name} ($${c.def.precio}) · CANCELAR`
+  )];
   if (!c.ok && c.motivo) lineas.push(c.motivo);
   cajaAyuda(ctx, view, lineas, c.ok ? 'rgba(95, 209, 74, 0.8)' : 'rgba(232, 67, 79, 0.8)');
 }
@@ -323,7 +327,7 @@ function tienda(ctx, m, view, time) {
   ctx.textAlign = 'center';
   ctx.font = `bold 12px ${FUENTE}`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-  ctx.fillText('Clic en algo para comprarlo · T para cerrar', view.width / 2, o.y + PANEL.h - 14);
+  ctx.fillText(segunControl('Clic en algo para comprarlo · T para cerrar', 'Toca algo para comprarlo · TIENDA para cerrar'), view.width / 2, o.y + PANEL.h - 14);
 }
 
 function tarjeta(ctx, b, m, encima) {

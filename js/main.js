@@ -21,6 +21,8 @@ import { Menu } from './ui/menu.js';
 import { showFatalError, watchRuntimeErrors } from './core/boot.js';
 import { BootScreen } from './ui/bootScreen.js';
 import { AudioPanel } from './ui/audioPanel.js';
+import { DeviceMode } from './core/device.js';
+import { TouchControls } from './ui/touchControls.js';
 import { PAVOS_POR_OLEADA } from './data/defense.js';
 import { contarVisita, formatear } from './core/contador.js';
 
@@ -28,9 +30,14 @@ const canvas = document.getElementById('game-canvas');
 
 /** Ajusta el tamano CSS del canvas (la resolucion interna no cambia). */
 function resize() {
-  const margin = 24;
-  const availW = window.innerWidth - margin;
-  const availH = window.innerHeight - margin;
+  // Con el dedo el lienzo ocupa TODA la pantalla (los botones van por
+  // encima); en ordenador, con su marco de siempre. Y se mide lo que
+  // de verdad se ve: en un movil la barra del navegador come altura.
+  const tactil = document.body.classList.contains('modo-tactil');
+  const margin = tactil ? 0 : 24;
+  const vv = window.visualViewport;
+  const availW = (vv ? vv.width : window.innerWidth) - margin;
+  const availH = (vv ? vv.height : window.innerHeight) - margin;
   const ratio = CONFIG.canvas.width / CONFIG.canvas.height;
 
   let w = availW;
@@ -49,7 +56,13 @@ function resize() {
    ============================================================= */
 
 function arrancar() {
+  // ¿Dedo o raton? Pone la clase `modo-tactil` en el body, y la cambia
+  // sola si alguien pasa de uno a otro. Va antes del primer resize.
+  const dispositivo = new DeviceMode();
+
   window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 150));
+  window.visualViewport?.addEventListener('resize', resize);
   resize();
 
   // PORTADA DE CARGA. Arranca lo primero de todo, antes de montar nada,
@@ -70,6 +83,14 @@ function arrancar() {
   // Control de sonido (altavoz de la esquina). Se monta pronto para que
   // el volumen guardado este puesto antes del primer sonido.
   const audioPanel = new AudioPanel(profile);
+
+  // CONTROLES TACTILES: joystick y botones en pantalla para movil e iPad.
+  // Solo se ven con `modo-tactil`; con teclado y raton no hacen nada.
+  const tactil = new TouchControls({ game, dispositivo });
+  dispositivo.onChange = () => {
+    resize();
+    tactil.alCambiarModo();
+  };
 
   // El bucle se arranca ANTES del menu: asi, si el menu fallase, al menos
   // el escenario se sigue viendo y el fallo es evidente.
@@ -184,7 +205,7 @@ function arrancar() {
   portada?.finish();
 
   // Expuesto en consola para depurar comodamente.
-  window.FC = { game, menu, profile, CONFIG, portada, audioPanel };
+  window.FC = { game, menu, profile, CONFIG, portada, audioPanel, dispositivo, tactil };
 
   // CONTADOR DE VISITAS. Va lo ultimo y sin esperar a nada: si el
   // servicio tarda o esta caido, el juego ya esta funcionando y el

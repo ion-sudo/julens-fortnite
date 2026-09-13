@@ -7,6 +7,7 @@
  */
 
 import { PIECES, PIECE_ORDER } from '../data/structures.js';
+import { control, segunControl } from './controlHints.js';
 
 const SLOT_W = 92;
 const SLOT_H = 66;
@@ -25,7 +26,10 @@ export function drawBuildHud(ctx, player, view, time) {
   // Va sobre una pastilla oscura: si no, el verde se pierde encima de la
   // nieve o del cielo segun donde este el jugador.
   const pulso = 0.7 + 0.3 * Math.sin(time * 4);
-  const rotulo = 'MODO CONSTRUCCION  ·  Q para salir  ·  clic izquierdo para colocar';
+  const rotulo = segunControl(
+    'MODO CONSTRUCCION  ·  Q para salir  ·  clic izquierdo para colocar',
+    'MODO CONSTRUCCION  ·  COMBATE para salir  ·  COLOCAR para poner'
+  );
   ctx.textAlign = 'center';
   ctx.font = 'bold 13px "Trebuchet MS", sans-serif';
 

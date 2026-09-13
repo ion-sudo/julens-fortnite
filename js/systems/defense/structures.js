@@ -22,6 +22,7 @@ import {
 } from '../../data/defense.js';
 import { drawTower, drawTrap } from '../../entities/defenseSprites.js';
 import { playShotAt } from '../../core/audio.js';
+import { control, segunControl } from '../../ui/controlHints.js';
 
 /** Color de las balas de las torres segun su nivel. */
 const RAREZA_NIVEL = [null, 'rare', 'epic', 'legendary'];
@@ -257,7 +258,7 @@ export class DefenseStructures {
   _gastar(s) {
     s.usos--;
     s.flash = 1;
-    if (s.usos === 0) this.mode.game.showMessage(`${s.def.name} gastada · G para recargarla`);
+    if (s.usos === 0) this.mode.game.showMessage(`${s.def.name} gastada · ${control('upgrade')} para recargarla`);
   }
 
   /* =============================================================

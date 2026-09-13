@@ -75,6 +75,7 @@ import { drawWorldMap } from '../ui/worldMap.js';
 import { ReloadManager } from '../systems/reload.js';
 import { drawRespawnHud } from '../ui/reloadHud.js';
 import { Ambience } from '../world/ambience.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 /**
  * MANDO MUDO. Se le pasa al jugador cuando esta caido esperando a
@@ -377,7 +378,7 @@ export class Game {
     this.mobility?.forceRelease(p);
 
     this.particles.spark(cx, p.y + p.h, '#b45cf0', 20, 360);
-    this.showMessage('¡Grieta abierta! Cae y abre la paravela con Espacio', 'epic');
+    this.showMessage(`¡Grieta abierta! Cae y abre la paravela con ${control('jump')}`, 'epic');
   }
 
   /**
@@ -924,6 +925,11 @@ export class Game {
     this._updateFps(frameDt);
     // Lo guarda para el dibujo, que va con el delta real (la lluvia).
     this.frameDt = frameDt;
+
+    // CONTROLES TACTILES (ui/touchControls.js): colocan la mira y aprietan
+    // botones virtuales ANTES de que el juego lea el raton y el teclado.
+    // En ordenador no hay nada enganchado aqui.
+    this.onFrame?.(frameDt);
 
     // La mira debe leerse con la camara del frame anterior ya aplicada.
     if (this.state === 'playing') this.mouse.syncWorld();

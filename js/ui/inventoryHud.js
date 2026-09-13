@@ -32,18 +32,36 @@ const MARGIN = 24;
 const KEY_LABELS = ['F', '1', '2', '3', '4', '5'];
 
 /**
+ * DONDE ESTAN LAS RANURAS en el lienzo.
+ *
+ * La usan el dibujo y los controles tactiles, que ponen una zona
+ * tocable encima de cada ranura pintada: al salir de la misma cuenta,
+ * lo que se ve y lo que se toca no pueden descuadrarse.
+ * @returns {Array<{x:number, y:number, w:number, h:number}>}
+ */
+export function inventorySlotRects(view) {
+  const totalW = SLOT_COUNT * SLOT_W + (SLOT_COUNT - 1) * GAP;
+  const x0 = view.width - MARGIN - totalW;
+  const y0 = view.height - MARGIN - SLOT_H;
+  const lista = [];
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    lista.push({ x: x0 + i * (SLOT_W + GAP), y: y0, w: SLOT_W, h: SLOT_H });
+  }
+  return lista;
+}
+
+/**
  * @param {CanvasRenderingContext2D} ctx
  * @param {import('../core/inventory.js').Inventory} inventory
  * @param {{width:number,height:number}} view
  */
 export function drawInventory(ctx, inventory, view, time, player = null) {
-  const totalW = SLOT_COUNT * SLOT_W + (SLOT_COUNT - 1) * GAP;
-  const x0 = view.width - MARGIN - totalW;
-  const y0 = view.height - MARGIN - SLOT_H;
+  const rects = inventorySlotRects(view);
+  const x0 = rects[0].x;
+  const y0 = rects[0].y;
 
   for (let i = 0; i < SLOT_COUNT; i++) {
-    const x = x0 + i * (SLOT_W + GAP);
-    drawSlot(ctx, inventory, i, x, y0, time, player);
+    drawSlot(ctx, inventory, i, rects[i].x, y0, time, player);
   }
 
   // Contador de balas del arma equipada, a la izquierda de las cajitas.

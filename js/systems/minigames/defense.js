@@ -42,6 +42,7 @@ import { XP } from '../../data/levels.js';
 import {
   playExplosionAt, playShotAt, playTrueno, playReward, playPickup,
 } from '../../core/audio.js';
+import { control, segunControl } from '../../ui/controlHints.js';
 
 /** Hora del ciclo en cada fase (ver world/ambience.js: 0,5 es mediodia). */
 const HORA_DIA = 0.45;
@@ -172,7 +173,10 @@ export class JulenDefense extends Minigame {
     game.xp?.reset();
     game.missions?.startMatch();
 
-    game.showMessage('T tienda · G mejorar · P empezar la oleada', 'legendary');
+    game.showMessage(segunControl(
+      'T tienda · G mejorar · P empezar la oleada',
+      'Botones de arriba: TIENDA · MEJORAR · EMPEZAR la oleada'
+    ), 'legendary');
   }
 
   /** Quita lo que el modo ha enganchado fuera de si mismo. */

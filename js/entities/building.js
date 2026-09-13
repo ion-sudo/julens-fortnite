@@ -28,6 +28,7 @@ import { roundRectPath, makeRng } from '../core/utils.js';
 import {
   BUILDING_TYPES, WALL, ROOF, DOOR_H, DOOR_W, DOOR_RADIUS, STEP_H, heightOf,
 } from '../data/buildings.js';
+import { control, segunControl } from '../ui/controlHints.js';
 
 export { BUILDING_TYPES, DOOR_RADIUS };
 
@@ -787,7 +788,7 @@ export class Building {
   /** Cartel encima de la puerta. */
   drawPrompt(ctx, puerta) {
     if (!puerta) return;
-    const texto = puerta.open ? 'E para cerrar' : 'E para abrir';
+    const texto = `${control('pickup')} para ${puerta.open ? 'cerrar' : 'abrir'}`;
     const x = this.doorCenterX(puerta);
     const y = puerta.y - 46;
 

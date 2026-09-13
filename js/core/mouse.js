@@ -102,6 +102,43 @@ export class Mouse {
     this.rightPressed = false;
   }
 
+  /* =============================================================
+     RATON VIRTUAL (controles tactiles, ui/touchControls.js)
+     -------------------------------------------------------------
+     El dedo mueve la mira y aprieta los botones por aqui, asi que el
+     combate, la construccion y las pantallas que se pulsan siguen
+     leyendo el raton de siempre.
+     ============================================================= */
+
+  /** Pone el cursor en un punto del lienzo (pixeles internos). */
+  setVirtualPosition(sx, sy) {
+    this.screenX = Math.max(0, Math.min(this.canvas.width, sx));
+    this.screenY = Math.max(0, Math.min(this.canvas.height, sy));
+    this.inside = true;
+  }
+
+  /** Aprieta un boton ('left' o 'right') y lo deja apretado. */
+  pressVirtual(boton = 'left') {
+    if (boton === 'right') {
+      if (!this.right) this.rightPressed = true;
+      this.right = true;
+    } else {
+      if (!this.left) this.leftPressed = true;
+      this.left = true;
+    }
+  }
+
+  releaseVirtual(boton = 'left') {
+    if (boton === 'right') this.right = false;
+    else this.left = false;
+  }
+
+  /** Un clic: pulsado este frame, sin quedarse apretado. */
+  clickVirtual(boton = 'left') {
+    if (boton === 'right') this.rightPressed = true;
+    else this.leftPressed = true;
+  }
+
   /**
    * Recalcula la posicion en el mundo. Hay que llamarlo cada frame
    * DESPUES de mover la camara, para que la mira no vaya con retraso.

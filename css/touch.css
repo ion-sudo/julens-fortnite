@@ -1,0 +1,427 @@
+/* =============================================================
+   touch.css
+   -------------------------------------------------------------
+   MOVIL E IPAD: los controles tactiles en pantalla y los ajustes de
+   la pagina para jugar con el dedo.
+
+   Todo cuelga de la clase `modo-tactil` del body (la pone
+   js/core/device.js). En ordenador esa clase no esta y nada de esto
+   se aplica: los controles de teclado y raton quedan como siempre.
+
+   La excepcion son las reglas del MENU con poca altura del final: esas
+   dependen del tamano de la pantalla, no del dedo, porque un menu que
+   no cabe no cabe igual con raton.
+   ============================================================= */
+
+/* ---------- La pagina ---------- */
+
+/* El lienzo, sin marco ni sombra: en una pantalla pequena cada pixel cuenta. */
+body.modo-tactil #game-canvas {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Titulo y chuleta de teclas: sobran con el dedo (y tapaban el juego). */
+body.modo-tactil #game-title,
+body.modo-tactil #controls-help {
+  display: none !important;
+}
+
+/* 100dvh = la altura que de verdad se ve (sin la barra del navegador). */
+body.modo-tactil #game-container {
+  height: 100dvh;
+}
+
+/* Ni zoom con doble toque, ni lupa, ni menu al mantener. */
+#game-canvas,
+#touch-root {
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+.btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* El sonido sube a la esquina de arriba: abajo estan los botones. */
+body.modo-tactil:not(.in-menu) #audio-panel {
+  top: calc(env(safe-area-inset-top) + 8px);
+  bottom: auto;
+  right: calc(env(safe-area-inset-right) + 8px);
+}
+body.modo-tactil:not(.in-menu) #audio-sliders { order: 1; }
+body.modo-tactil:not(.in-menu) #audio-toggle {
+  width: 40px;
+  height: 40px;
+  font-size: 17px;
+}
+
+/* =============================================================
+   CONTENEDOR DE LOS CONTROLES
+   ============================================================= */
+
+#touch-root {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 500;              /* encima del juego, debajo del sonido y la portada */
+  pointer-events: none;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+
+  /* Tamanos que crecen con la pantalla (iPad) sin pasarse en un movil. */
+  --tc-boton: clamp(46px, 11.5vh, 74px);
+  --tc-grande: clamp(66px, 19vh, 108px);
+  --tc-mini: clamp(38px, 9vh, 52px);
+  --tc-borde-dcha: max(10px, env(safe-area-inset-right));
+  --tc-borde-izda: max(6px, env(safe-area-inset-left));
+}
+
+/* Solo con el dedo y solo jugando (en el menu no hay nada que mover). */
+body.modo-tactil:not(.in-menu) #touch-root { display: block; }
+#touch-root [hidden] { display: none !important; }
+
+/* La zona libre recoge el joystick, la mira y los toques-clic. */
+.tc-zona {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+}
+
+/* =============================================================
+   BOTONES
+   ============================================================= */
+
+.tc-boton {
+  position: absolute;
+  width: var(--tc-boton);
+  height: var(--tc-boton);
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  background: rgba(10, 16, 34, 0.42);
+  color: #ffffff;
+  font: inherit;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  pointer-events: auto;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  transition: transform 0.08s ease, background-color 0.08s ease;
+}
+
+.tc-icono { font-size: calc(var(--tc-boton) * 0.36); }
+.tc-texto {
+  font-size: clamp(7px, 1.5vh, 10px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  opacity: 0.92;
+}
+
+.tc-boton.activo {
+  transform: scale(0.9);
+  background: rgba(90, 200, 255, 0.45);
+}
+
+/* Disparar: grande y rojo, que se encuentra sin mirar. */
+.tc-boton[data-id="disparar"] {
+  width: var(--tc-grande);
+  height: var(--tc-grande);
+  background: rgba(232, 67, 79, 0.45);
+  border-color: rgba(255, 170, 170, 0.85);
+}
+.tc-boton[data-id="disparar"] .tc-icono { font-size: calc(var(--tc-grande) * 0.34); }
+.tc-boton[data-id="disparar"].activo { background: rgba(255, 90, 100, 0.7); }
+
+/* Interruptores encendidos */
+#touch-root.tc-correr [data-id="correr"],
+#touch-root.tc-apuntar [data-id="apuntar"] {
+  background: rgba(255, 210, 63, 0.45);
+  border-color: #ffd23f;
+}
+#touch-root.tc-auto [data-id="auto"] {
+  background: rgba(95, 209, 74, 0.5);
+  border-color: #9be38a;
+}
+
+/* =============================================================
+   RACIMO DE LA DERECHA
+   Una caja sin tamano pegada abajo a la derecha, justo por encima del
+   inventario (lo calcula el JS: --tc-sobre-inventario). Cada boton se
+   coloca con right/bottom desde esa esquina.
+   ============================================================= */
+
+.tc-racimo {
+  position: absolute;
+  right: calc(var(--tc-borde-dcha) + 6px);
+  bottom: var(--tc-sobre-inventario, 110px);
+  width: 0;
+  height: 0;
+}
+
+#touch-root [data-id="disparar"] { right: 0; bottom: 0; }
+#touch-root [data-id="saltar"] {
+  right: calc((var(--tc-grande) - var(--tc-boton)) / 2);
+  bottom: calc(var(--tc-grande) + 10px);
+}
+#touch-root [data-id="agachar"],
+#touch-root [data-id="pared"] {
+  right: calc(var(--tc-grande) + 10px);
+  bottom: 0;
+}
+#touch-root [data-id="recoger"],
+#touch-root [data-id="suelo"] {
+  right: calc(var(--tc-grande) + var(--tc-boton) + 20px);
+  bottom: 0;
+}
+#touch-root [data-id="apuntar"],
+#touch-root [data-id="rampa"] {
+  right: calc(var(--tc-grande) + 10px);
+  bottom: calc(var(--tc-boton) + 10px);
+}
+#touch-root [data-id="correr"] {
+  right: calc(var(--tc-grande) + var(--tc-boton) + 20px);
+  bottom: calc(var(--tc-boton) + 10px);
+}
+#touch-root [data-id="construir"],
+#touch-root [data-id="combate"] {
+  right: calc((var(--tc-grande) - var(--tc-boton)) / 2);
+  bottom: calc(var(--tc-grande) + var(--tc-boton) + 20px);
+}
+#touch-root [data-id="pico"] {
+  right: calc(var(--tc-grande) + 10px);
+  bottom: calc(var(--tc-boton) * 2 + 20px);
+}
+
+/* Combate o construccion: uno u otro. */
+#touch-root .tc-capa-construir { display: none; }
+#touch-root.tc-construyendo .tc-capa-construir { display: flex; }
+#touch-root.tc-construyendo .tc-capa-combate { display: none; }
+#touch-root.tc-sin-construir [data-id="construir"] { display: none; }
+
+/* En el bus y cayendo solo hace falta saltar (y abrir la paravela). */
+#touch-root.tc-volando .tc-racimo .tc-boton:not([data-id="saltar"]) { display: none; }
+
+/* =============================================================
+   BARRA DE UTILIDADES
+   ============================================================= */
+
+.tc-barra,
+.tc-contexto {
+  position: absolute;
+  display: flex;
+  gap: 8px;
+}
+.tc-barra .tc-boton,
+.tc-contexto .tc-boton {
+  position: relative;
+  width: var(--tc-mini);
+  height: var(--tc-mini);
+}
+.tc-barra .tc-icono,
+.tc-contexto .tc-icono { font-size: calc(var(--tc-mini) * 0.38); }
+
+/* iPad: arriba, en la franja negra que sobra encima del juego. */
+#touch-root.tc-barra-arriba .tc-barra {
+  top: calc(env(safe-area-inset-top) + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: row;
+}
+/* Movil alargado: en vertical, en la franja que sobra a la izquierda. */
+#touch-root.tc-barra-lado .tc-barra {
+  left: var(--tc-borde-izda);
+  top: 50%;
+  transform: translateY(-58%);
+  flex-direction: column;
+}
+
+#touch-root.tc-volando .tc-barra .tc-boton:not([data-id="mapa"]):not([data-id="salir"]) { display: none; }
+
+/* Botones de contexto: arriba a la derecha, al lado del sonido. */
+.tc-contexto {
+  top: calc(env(safe-area-inset-top) + 8px);
+  right: calc(var(--tc-borde-dcha) + 54px);
+  flex-direction: row;
+}
+
+#touch-root .solo-vehiculo,
+#touch-root .solo-defensa,
+#touch-root .solo-colocando { display: none; }
+#touch-root.tc-vehiculo .solo-vehiculo,
+#touch-root.tc-defensa .solo-defensa,
+#touch-root.tc-colocando .solo-colocando { display: flex; }
+
+/* Con una pantalla que se pulsa (tienda, bailes, final), fuera lo que
+   estorba: se ve lo que hay que tocar. */
+#touch-root.tc-modal .tc-racimo,
+#touch-root.tc-modal .tc-barra,
+#touch-root.tc-modal .tc-joy-base,
+#touch-root.tc-modal .tc-ranuras { display: none; }
+/* ...menos con la rueda de bailes abierta: su boton se queda, para
+   poder cerrarla (y solo ese). */
+#touch-root.tc-bailando .tc-barra { display: flex; }
+#touch-root.tc-bailando .tc-barra .tc-boton:not([data-id="bailes"]) { display: none; }
+
+/* =============================================================
+   INVENTARIO (zonas invisibles encima de las ranuras pintadas)
+   ============================================================= */
+
+.tc-ranura {
+  position: fixed;
+  pointer-events: auto;
+  border-radius: 10px;
+}
+.tc-ranura:active { background: rgba(255, 255, 255, 0.12); }
+
+/* =============================================================
+   JOYSTICK
+   ============================================================= */
+
+.tc-joy-base {
+  position: absolute;
+  width: 136px;
+  height: 136px;
+  margin: -68px 0 0 -68px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1), rgba(10, 16, 34, 0.3));
+  pointer-events: none;
+}
+/* Sin dedo: una pista de donde esta, a medio gas. Va a media altura y
+   no mas abajo: en un movil, mas abajo quedaba justo encima de las
+   barras de vida y escudo, que el juego pinta en esa esquina. */
+.tc-joy-base.reposo {
+  left: calc(var(--tc-borde-izda) + 17vw);
+  top: 52%;
+  opacity: 0.45;
+}
+.tc-joy-mando {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 58px;
+  height: 58px;
+  margin: -29px 0 0 -29px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* =============================================================
+   CONFIRMAR SALIDA
+   ============================================================= */
+
+.tc-confirmar {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 10, 24, 0.6);
+  pointer-events: auto;
+}
+.tc-caja {
+  padding: 18px 22px;
+  border-radius: 14px;
+  border: 2px solid #e8434f;
+  background: #131c38;
+  color: #fff;
+  text-align: center;
+}
+.tc-caja p { margin: 0 0 14px; font-size: 18px; font-weight: 900; }
+.tc-fila { display: flex; gap: 10px; }
+.tc-fila button {
+  min-width: 130px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font: inherit;
+  font-weight: 900;
+  pointer-events: auto;
+}
+.tc-fila .tc-peligro { background: #e8434f; border-color: #ff9a9a; }
+
+/* =============================================================
+   GIRA EL MOVIL
+   ============================================================= */
+
+.tc-girar {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 12, 26, 0.96);
+  color: #fff;
+  text-align: center;
+  font-family: "Trebuchet MS", system-ui, sans-serif;
+}
+@media (orientation: portrait) {
+  body.modo-tactil:not(.tc-girar-ignorado) .tc-girar { display: flex; }
+}
+.tc-girar-caja { padding: 24px; max-width: 320px; }
+.tc-girar-icono {
+  font-size: 64px;
+  animation: tc-girar 1.8s ease-in-out infinite;
+}
+@keyframes tc-girar {
+  0%, 20% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(-90deg); }
+}
+.tc-girar p { margin: 12px 0 6px; font-size: 26px; font-weight: 900; }
+.tc-girar small { display: block; margin-bottom: 18px; opacity: 0.75; }
+.tc-girar button {
+  padding: 12px 18px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+}
+
+/* =============================================================
+   MENU EN PANTALLAS BAJAS (movil en horizontal)
+   -------------------------------------------------------------
+   El menu esta pensado para un monitor. Con 390 px de alto la barra de
+   arriba se comia la mitad y la pantalla de inicio se cortaba. Aqui se
+   compacta todo y cada pantalla puede hacer scroll con el dedo.
+   ============================================================= */
+
+@media (max-height: 540px) {
+  .menu-topbar { padding: 6px 14px; gap: 10px; }
+  .menu-logo { font-size: 18px; letter-spacing: 1px; }
+
+  .menu-screen {
+    padding: 8px 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  /* Se mantienen las dos columnas: una sola columna no cabe en 390 px. */
+  .home-layout {
+    grid-template-columns: minmax(200px, 300px) 1fr;
+    gap: 12px;
+  }
+  .showcase { grid-template-columns: 1fr minmax(150px, 210px); }
+  .showcase-stage { min-height: 0; }
+
+  .home-menu { touch-action: pan-y; }
+  .home-menu .btn-sub { display: none; }
+  .home-menu .btn { padding-top: 5px; padding-bottom: 5px; }
+  .home-menu .btn-play { padding-top: 8px; padding-bottom: 8px; }
+  .btn-title { font-size: 15px; }
+}

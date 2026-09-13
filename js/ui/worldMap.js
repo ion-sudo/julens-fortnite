@@ -20,6 +20,7 @@
 
 import { ZONES } from '../data/zones.js';
 import { biomeOf } from '../data/biomes.js';
+import { control, segunControl } from './controlHints.js';
 
 /* ---------- Medidas del panel ---------- */
 const PANEL = { x: 58, y: 148, w: 1164, h: 330 };
@@ -690,7 +691,7 @@ function drawFooter(ctx, view, player, world) {
 
   ctx.font = 'bold 13px "Trebuchet MS", sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillText('Pulsa M para cerrar el mapa', view.width / 2, PANEL.y + PANEL.h + 102);
+  ctx.fillText(segunControl('Pulsa M para cerrar el mapa', 'Toca MAPA para cerrarlo'), view.width / 2, PANEL.y + PANEL.h + 102);
 }
 
 /* =============================================================
