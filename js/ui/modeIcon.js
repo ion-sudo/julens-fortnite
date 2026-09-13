@@ -27,6 +27,7 @@ export function drawModeIcon(ctx, icon, color) {
     case 'duos':      dibujarEquipo(ctx, color, 2); break;
     case 'escuadron': dibujarEquipo(ctx, color, 4); break;
     case 'recarga': dibujarRecarga(ctx, color); break;
+    case 'defensa': dibujarDefensa(ctx, color); break;
     default:       dibujarRoyale(ctx, color);
   }
 
@@ -300,6 +301,55 @@ function dibujarRecarga(ctx, color) {
   ctx.moveTo(30, 31); ctx.lineTo(30, 22);
   ctx.moveTo(30, 31); ctx.lineTo(37, 34);
   ctx.stroke();
+}
+
+/**
+ * JULEN DEFENSA: la torre con su faro rojo, un rayo en el cielo de
+ * noche y una mano de zombi saliendo del suelo.
+ */
+function dibujarDefensa(ctx, color) {
+  ctx.fillStyle = 'rgba(30, 36, 70, 0.9)';
+  redondo(ctx, -46, -46, 92, 92, 14);
+  ctx.fill();
+
+  // Rayo
+  ctx.strokeStyle = '#e8f0ff';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(28, -44); ctx.lineTo(19, -26); ctx.lineTo(27, -24); ctx.lineTo(15, -4);
+  ctx.stroke();
+
+  // Torre
+  ctx.fillStyle = '#7a7c88';
+  ctx.beginPath();
+  ctx.moveTo(-26, 40); ctx.lineTo(-20, -18); ctx.lineTo(4, -18); ctx.lineTo(10, 40);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#5a5c66';
+  for (let i = 0; i < 3; i++) ctx.fillRect(-21 + i * 9, -26, 6, 8);
+  ctx.fillStyle = '#3a2a1e';
+  ctx.fillRect(-13, 24, 12, 16);
+
+  // Faro rojo
+  const g = ctx.createRadialGradient(-8, -36, 1, -8, -36, 18);
+  g.addColorStop(0, 'rgba(255, 60, 50, 0.95)');
+  g.addColorStop(1, 'rgba(255, 60, 50, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(-8, -36, 18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(-8, -36, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Mano de zombi
+  ctx.fillStyle = '#7fae55';
+  ctx.beginPath();
+  ctx.moveTo(22, 42); ctx.lineTo(24, 16); ctx.lineTo(36, 16); ctx.lineTo(38, 42);
+  ctx.closePath();
+  ctx.fill();
+  for (let i = 0; i < 4; i++) ctx.fillRect(23 + i * 3.6, 5, 2.6, 12);
 }
 
 /** Un color hex con transparencia. */

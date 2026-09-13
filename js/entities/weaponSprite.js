@@ -55,6 +55,10 @@ export function drawWeapon(ctx, weapon, opts = {}) {
     case 'llamas':       drawLanzallamas(ctx, tint); break;
     case 'pulso':        drawPulso(ctx, tint); break;
     case 'grieta':       drawGrieta(ctx, tint); break;
+    // Las de JULEN DEFENSA
+    case 'cohetes':      drawCohetes(ctx, tint); break;
+    case 'hielo':        drawHielo(ctx, tint); break;
+    case 'cadena':       drawCadena(ctx, tint); break;
     default:             drawPistol(ctx, tint);
   }
 
@@ -79,6 +83,9 @@ export function muzzleDistance(weapon) {
     case 'llamas':      return 38;
     case 'pulso':       return 50;
     case 'grieta':      return 24;
+    case 'cohetes':     return 58;
+    case 'hielo':       return 46;
+    case 'cadena':      return 44;
     default:            return 26;
   }
 }
@@ -562,5 +569,95 @@ function drawGrieta(ctx, tint) {
   ctx.beginPath();
   ctx.arc(11, -16, 1.8, 0, Math.PI * 2);
   ctx.arc(11, 1.5, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+/* =============================================================
+   ARMAS DE JULEN DEFENSA
+   ============================================================= */
+
+/** Lanzacohetes: un tubo largo con la punta del cohete asomando. */
+function drawCohetes(ctx, tint) {
+  grip(ctx);
+
+  ctx.fillStyle = '#4c5a3a';
+  roundRectPath(ctx, -18, -15, 64, 13, 5);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+  ctx.fillRect(-16, -14, 60, 3);
+
+  // Franjas de la rareza
+  ctx.fillStyle = tint;
+  ctx.fillRect(-10, -15, 4, 13);
+  ctx.fillRect(30, -15, 4, 13);
+
+  // Boca y cohete
+  ctx.fillStyle = METAL_DARK;
+  ctx.fillRect(44, -17, 8, 17);
+  ctx.fillStyle = tint;
+  ctx.beginPath();
+  ctx.moveTo(52, -13); ctx.lineTo(60, -8.5); ctx.lineTo(52, -4);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mira
+  ctx.fillStyle = METAL;
+  ctx.fillRect(6, -21, 12, 6);
+}
+
+/** Rifle de Hielo: canon de cristal con picos de escarcha. */
+function drawHielo(ctx, tint) {
+  grip(ctx);
+
+  ctx.fillStyle = '#2f4a62';
+  roundRectPath(ctx, -14, -13, 34, 12, 4);
+  ctx.fill();
+  ctx.fillStyle = '#9fe6ff';
+  ctx.fillRect(-14, -13, 34, 3);
+
+  ctx.fillStyle = 'rgba(170, 235, 255, 0.85)';
+  ctx.beginPath();
+  ctx.moveTo(18, -12); ctx.lineTo(46, -9); ctx.lineTo(46, -5); ctx.lineTo(18, -2);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = tint;
+  for (const [x, h] of [[24, 7], [32, 9], [40, 6]]) {
+    ctx.beginPath();
+    ctx.moveTo(x - 3, -12); ctx.lineTo(x, -12 - h); ctx.lineTo(x + 3, -12);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+  ctx.fillRect(20, -9, 22, 1.6);
+}
+
+/** Arma de Rayo en Cadena: bobina de cobre y una esfera cargada. */
+function drawCadena(ctx, tint) {
+  grip(ctx);
+
+  ctx.fillStyle = METAL;
+  roundRectPath(ctx, -12, -14, 30, 13, 4);
+  ctx.fill();
+  ctx.fillStyle = METAL_LIGHT;
+  ctx.fillRect(-12, -14, 30, 3);
+
+  ctx.fillStyle = METAL_DARK;
+  ctx.fillRect(16, -11, 20, 7);
+  ctx.strokeStyle = '#c8a04a';
+  ctx.lineWidth = 2;
+  for (const x of [19, 23, 27, 31]) {
+    ctx.beginPath();
+    ctx.moveTo(x, -12); ctx.lineTo(x, -3);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = tint;
+  ctx.beginPath();
+  ctx.arc(40, -7.5, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  ctx.beginPath();
+  ctx.arc(38.5, -9, 2, 0, Math.PI * 2);
   ctx.fill();
 }

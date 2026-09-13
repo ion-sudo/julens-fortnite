@@ -201,6 +201,16 @@ export class Game {
    *   defecto 'royale', que es el battle royale de siempre.
    */
   startMatch(loadout, mode = DEFAULT_MODE) {
+    // Modos que no son un battle royale y montan su propio escenario
+    // (JULEN DEFENSA). Se lanzan con el montaje de minijuegos, pero
+    // recordando el modo: al acabar cuentan como partida.
+    const lanzar = modeById(mode).rules?.launch;
+    if (lanzar) {
+      this.modeDef = modeById(mode);
+      this.mode = this.modeDef.id;
+      return this.startMinigame(lanzar, loadout);
+    }
+
     // El aviso de la partida anterior fuera, ANTES de montar nada: los
     // sistemas ponen los suyos durante el montaje (ver _afterSetup).
     this.message = null;
@@ -417,6 +427,8 @@ export class Game {
     // --- Sistemas de partida, de cero cada vez ---
     this.particles.clear();
     this.bullets.clear();
+    // Nadie hereda el aviso de impacto de un modo anterior.
+    this.bullets.onImpact = null;
 
     // La ranura 1 lleva el pico con el aspecto elegido en la taquilla.
     this.inventory = new Inventory(loadout.pickaxe);
@@ -670,11 +682,13 @@ export class Game {
    * Termina la partida y vuelve al menu.
    * @returns {{played: boolean}} resumen para que main.js de la recompensa
    */
-  endMatch() {
+  endMatch(datos = null) {
+    // `datos` lo pasan los modos que no son un battle royale (JULEN
+    // DEFENSA) para decir como ha ido: sin el, se lee de la partida.
     const jugada = this.state === 'playing';
     this.vehicles?.forceExit(this.player);
     this.mobility?.forceRelease(this.player);
-    const resultado = this.match?.result ?? 'jugando';
+    const resultado = datos?.result ?? this.match?.result ?? 'jugando';
     // La partida cuenta para las misiones de constancia, y el resultado
     // para las de victoria. Se reporta ANTES de armar el resumen: si no,
     // la mision de ganar no saldria en el aviso del menu.
@@ -696,8 +710,8 @@ export class Game {
     const stats = jugada && this.profile
       ? this.profile.recordMatch({
           won: resultado === 'victoria',
-          kills: this.match?.kills ?? 0,
-          placement: this.match?.placement ?? null,
+          kills: datos?.kills ?? this.match?.kills ?? 0,
+          placement: datos?.placement ?? this.match?.placement ?? null,
         })
       : null;
 
@@ -706,9 +720,11 @@ export class Game {
       result: resultado,
       stats,
       streak: this.profile?.streak ?? 0,
-      kills: this.match?.kills ?? 0,
-      placement: this.match?.placement ?? null,
-      killerName: this.match?.killerName ?? null,
+      kills: datos?.kills ?? this.match?.kills ?? 0,
+      placement: datos?.placement ?? this.match?.placement ?? null,
+      killerName: datos ? null : (this.match?.killerName ?? null),
+      // Oleadas aguantadas (solo JULEN DEFENSA): dan pavos extra.
+      waves: datos?.waves ?? 0,
       missions: this.missions ? [...this.missions.completedThisMatch] : [],
       xp,
     };
@@ -788,6 +804,11 @@ export class Game {
     if (!this.mouse.leftPressed) return;
 
     if (hits(botones.retry, mx, my)) {
+      // Un modo que cuenta como partida cobra antes de volver a empezar.
+      if (this.minigame.countsAsMatch) {
+        this.onRetryCounted?.();
+        return;
+      }
       // Otra vez, con lo mismo equipado. startMinigame ya llama al
       // teardown del modo anterior antes de montar el nuevo.
       // Se reintenta el MISMO nivel, no el modo a secas.
@@ -797,7 +818,27 @@ export class Game {
       return;
     }
 
-    if (hits(botones.exit, mx, my)) this.onExitToMinigames?.();
+    if (hits(botones.exit, mx, my)) {
+      // Salir de un modo que cuenta como partida es salir de una partida.
+      if (this.minigame.countsAsMatch) this.onExitToMenu?.();
+      else this.onExitToMinigames?.();
+    }
+  }
+
+  /**
+   * Termina un modo que CUENTA COMO PARTIDA (JULEN DEFENSA) y lo paga
+   * como una: misiones, XP, pase y estadisticas, por el mismo camino
+   * que el battle royale.
+   * @returns el mismo resumen que endMatch
+   */
+  endCountedMinigame() {
+    const datos = this.minigame?.matchSummary?.() || {};
+    this.vehicles?.forceExit(this.player);
+    this.mobility?.forceRelease(this.player);
+    this.minigame?.teardown?.();
+    this.minigame = null;
+    this.minigameDef = null;
+    return this.endMatch(datos);
   }
 
   /** Termina el minijuego en curso y vuelve al modo menu. */
@@ -936,8 +977,16 @@ export class Game {
 
     if (this.state !== 'playing') { stopStorm(); playMusic('menu'); return; }
 
-    // Los minijuegos van con la musica de partida y sin tormenta.
-    if (this.minigame) { stopStorm(); playMusic('partida'); return; }
+    // Los minijuegos van con la musica de partida y sin tormenta, salvo
+    // que el modo pida la suya (JULEN DEFENSA: calma de dia, tension y
+    // viento de tormenta de noche).
+    if (this.minigame) {
+      playMusic(this.minigame.musicTrack?.() || 'partida');
+      const viento = this.minigame.stormLevel?.() || 0;
+      if (viento > 0) setStormLevel(viento);
+      else stopStorm();
+      return;
+    }
     const zona = this.match?.zone;
     if (!zona) { stopStorm(); return; }
 
@@ -1020,13 +1069,17 @@ export class Game {
     // CAIDO ESPERANDO A VOLVER (Julen Recarga): la partida sigue
     // corriendo a tu alrededor, pero tu no controlas nada hasta que
     // termina la cuenta atras.
-    const esperando = this.reload.isPending(this.player);
+    const esperando = this.reload.isPending(this.player) || !!this.minigame?.freezePlayer;
+    // El modo puede pedir que el clic sea suyo (la tienda de JULEN
+    // DEFENSA abierta, o colocando una torre): se anda, pero no se
+    // dispara, ni se construye, ni se baila, ni se recoge.
+    const bloqueado = esperando || !!this.minigame?.blocksActions;
     this.player.update(dt, esperando ? INPUT_QUIETO : this.input);
 
     // EMOTES. Van los primeros porque mandan sobre todo lo demas: con la
     // rueda abierta o bailando no se dispara, no se construye y no se
     // anda, y asi no hay que comprobarlo en cada sistema por separado.
-    if (!volando && !esperando) this.emotes.update(dt, this.input, this.mouse);
+    if (!volando && !bloqueado) this.emotes.update(dt, this.input, this.mouse);
     const bailando = this.emotes.wheelOpen || this.emotes.active;
 
     // La construccion va ANTES del combate: en modo construccion el clic
@@ -1036,13 +1089,13 @@ export class Game {
     const conduciendo = !!this.player.driving;
     if (abatido) this.player.buildMode = false;
 
-    if (!volando && !conduciendo && !abatido && !bailando && !esperando) {
+    if (!volando && !conduciendo && !abatido && !bailando && !bloqueado) {
       this.build.update(dt, this.player, this.input, this.mouse);
     } else {
       this.player.buildMode = false;   // ni en el aire, ni al volante, ni abatido
     }
 
-    if (!volando && !conduciendo && !bailando && !esperando) this.combat.update(dt, this.mouse);
+    if (!volando && !conduciendo && !bailando && !bloqueado) this.combat.update(dt, this.mouse);
 
     // Abatidos: desangrado, y la E mantenida para levantar companeros.
     // Va ANTES de los cofres y del botin, que consumen la E de un toque.
@@ -1089,7 +1142,7 @@ export class Game {
     // Reparto de la tecla E, por orden de prioridad:
     // puerta de edificio -> cofre -> objeto del suelo.
     // En el aire no se recoge nada, y caido esperando a volver, tampoco.
-    if (!volando && !esperando) {
+    if (!volando && !bloqueado) {
       // Los vehiculos van primero: al volante, el resto de interacciones
       // (puertas, cofres, botin) no tienen sentido.
       this.vehicles.update(dt, this.player, this.input, this.match.bots);

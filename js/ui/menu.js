@@ -25,6 +25,13 @@ import { EMOTES, WHEEL_SLOTS } from '../data/emotes.js';
 import { drawEmoteIcon } from './emoteWheel.js';
 import { RENAME_COST, NAME_MIN, NAME_MAX } from '../core/profile.js';
 
+/**
+ * Los minijuegos que salen en su pantalla. Alguno esta en el catalogo
+ * solo para reutilizar su montaje y NO es un minijuego (JULEN DEFENSA es
+ * un modo de MAS JUEGOS): esos llevan `hidden` y aqui se quedan fuera.
+ */
+const MINIJUEGOS_VISIBLES = MINIGAMES.filter((m) => !m.hidden);
+
 export class Menu {
   /**
    * @param {import('../core/profile.js').Profile} profile
@@ -681,10 +688,10 @@ export class Menu {
   /** Subtitulo del boton del menu: cuantos hay listos. */
   _updateMinigamesBadge() {
     if (!this.minigamesSub) return;
-    const listos = MINIGAMES.filter((m) => m.ready).length;
-    this.minigamesSub.textContent = listos === MINIGAMES.length
-      ? `${MINIGAMES.length} modos para entrenar`
-      : `${listos} de ${MINIGAMES.length} disponibles`;
+    const listos = MINIJUEGOS_VISIBLES.filter((m) => m.ready).length;
+    this.minigamesSub.textContent = listos === MINIJUEGOS_VISIBLES.length
+      ? `${MINIJUEGOS_VISIBLES.length} modos para entrenar`
+      : `${listos} de ${MINIJUEGOS_VISIBLES.length} disponibles`;
   }
 
   /** Pinta las tarjetas de los minijuegos, con su dibujo y su record. */
@@ -692,7 +699,7 @@ export class Menu {
     if (!this.minigameGrid) return;
     this.minigameGrid.innerHTML = '';
 
-    for (const def of MINIGAMES) {
+    for (const def of MINIJUEGOS_VISIBLES) {
       this.minigameGrid.appendChild(this._minigameCard(def));
     }
   }

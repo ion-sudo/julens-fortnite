@@ -14,6 +14,7 @@ import { Sandbox } from './sandbox.js';
 import { Duel } from './duel.js';
 import { CoinRush } from './coins.js';
 import { Tag } from './tag.js';
+import { JulenDefense } from './defense.js';
 
 export const MINIGAME_MODES = {
   tiro: ShootingRange,
@@ -23,6 +24,8 @@ export const MINIGAME_MODES = {
   duelo: Duel,
   monedas: CoinRush,
   pilla: Tag,
+  // No sale en MINIJUEGOS: es un modo de MAS JUEGOS (ver data/modes.js)
+  defensa: JulenDefense,
 };
 
 /** La clase de un minijuego, o undefined si todavia no existe. */

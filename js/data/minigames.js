@@ -21,6 +21,7 @@
  *               'none'   -> sin record (modos libres)
  *   unit      texto de la unidad, para pintar el record
  *   ready     si ya esta implementado
+ *   hidden    no sale en la pantalla de MINIJUEGOS (ver JULEN DEFENSA)
  */
 
 export const MINIGAMES = [
@@ -71,6 +72,17 @@ export const MINIGAMES = [
     // El papel te toca al azar, y aguantar libre no se puede comparar con
     // pillar: cada uno lleva su record ('pilla:escondido' / 'pilla:contador').
     roles: true,
+  },
+  {
+    // JULEN DEFENSA no es un minijuego: es un MODO de MAS JUEGOS. Esta
+    // entrada existe solo para reutilizar el montaje de minijuegos
+    // (arena, marcador, pantalla de fin y record). `hidden` la saca de
+    // la pantalla de MINIJUEGOS.
+    id: 'defensa', name: 'Julen Defensa', icon: 'diana', color: '#e8434f',
+    desc: 'Defiende la torre de oleadas de zombis.',
+    goal: 'Aguanta las 10 oleadas sin que caiga la torre',
+    score: 'points', unit: 'oleadas', ready: true,
+    hidden: true,
   },
 ];
 

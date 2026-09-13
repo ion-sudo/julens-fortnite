@@ -39,6 +39,8 @@
  *   worldLoot   objetos sueltos por el suelo (null = los de CONFIG)
  *   teamSize    tamano de escuadron: 1 = individual, 2 = duos, 4 = escuadron
  *   blitz       si corre el sistema de nivel Blitz y potenciadores
+ *   launch      en vez de un battle royale, monta este escenario
+ *               (JULEN DEFENSA). El resto de reglas no se usan
  *   respawn     ajustes de REAPARICION: los caidos vuelven mientras
  *               quede un companero vivo (ver systems/reload.js).
  *               null = sin reaparicion, morir es morir
@@ -266,6 +268,26 @@ export const MODES = [
         stormProgress: 0.75,
       },
     },
+  },
+
+  /* =============================================================
+     JULEN DEFENSA
+     -------------------------------------------------------------
+     Tower defense de noche contra zombis. No es un battle royale: no
+     tiene bus, ni bots, ni zona. Por eso sus reglas no son las de los
+     demas, sino un `launch`: el id del escenario que monta (ver
+     systems/minigames/defense.js). Aun asi CUENTA COMO PARTIDA.
+     ============================================================= */
+  {
+    id: 'defensa',
+    name: 'Julen Defensa',
+    tagline: 'Defiende la torre de noche',
+    icon: 'defensa', color: '#e8434f',
+    desc: 'Aguanta 10 oleadas de zombis: disparas tu, colocas torres y ' +
+          'trampas, y de dia te preparas. Cada 5 oleadas, un jefe.',
+    bullets: ['Oleadas de zombis', 'Torres y trampas', 'Dia y noche', 'Jefes'],
+    ready: true,
+    rules: { launch: 'defensa' },
   },
 ];
 

@@ -29,6 +29,12 @@ export class BulletSystem {
     /** @type {Array<object>} */
     this.bullets = [];
     this.particles = particles;
+    /**
+     * Aviso de que una bala muere SIN darle a nadie (suelo, pared o
+     * fin de alcance). Lo usa JULEN DEFENSA para que los cohetes revienten
+     * tambien al chocar con el suelo. null en el resto de modos.
+     */
+    this.onImpact = null;
   }
 
   clear() { this.bullets.length = 0; }
@@ -60,6 +66,11 @@ export class BulletSystem {
       // perforante horizontal barria filas enteras de bots (todos
       // estan a la misma altura sobre el suelo).
       pierceLeft: o.pierce ? MAX_PIERCE : 0,
+      // Efecto especial al impactar (armas de JULEN DEFENSA). Viaja con
+      // la bala y se le pasa al objetivo, que decide que hacer con el.
+      effect: o.effect || null,
+      radius: o.radius || 0,
+      exploded: false,
       dead: false,
       // ¿Nacio dentro de una cupula? Se apunta al crearla: una bala que
       // se dispara desde dentro tiene que poder moverse por dentro, y
@@ -122,7 +133,10 @@ export class BulletSystem {
     {
 
       // --- Fin de alcance ---
-      if (b.traveled >= b.range) return true;
+      if (b.traveled >= b.range) {
+        this.onImpact?.(b);
+        return true;
+      }
 
       // --- Cupulas del escudo burbuja ---
       // Paran las balas EN LOS DOS SENTIDOS: se comprueba si la bala ha
@@ -167,7 +181,9 @@ export class BulletSystem {
 
         const r = t.rect();
         if (b.x >= r.x && b.x <= r.x + r.w && b.y >= r.y && b.y <= r.y + r.h) {
-          t.takeDamage(b.damage, b.x, b.y, b.owner);
+          // La bala va como quinto dato: asi un zombi sabe si le ha dado
+          // un cohete, hielo o un rayo. A los demas objetivos les sobra.
+          t.takeDamage(b.damage, b.x, b.y, b.owner, b);
           this.onDamage?.(b.damage, b.owner);
           b.hit.add(t);
           this.particles.spark(b.x, b.y, b.color, 7, 260);
@@ -197,6 +213,7 @@ export class BulletSystem {
         } else {
           this.particles.spark(b.x, b.y, '#e8d8b0', 5, 190);
         }
+        this.onImpact?.(b);
         return true;
       }
 
@@ -239,10 +256,10 @@ export class BulletSystem {
         ctx.stroke();
         ctx.globalAlpha = 1;
 
-        // Punta
-        ctx.fillStyle = '#fff6c8';
+        // Punta (los cohetes, gordos y naranjas; el hielo, azul)
+        ctx.fillStyle = b.effect === 'explosion' ? '#ff8a3d' : b.effect === 'hielo' ? '#bff1ff' : '#fff6c8';
         ctx.beginPath();
-        ctx.arc(b.x, b.y, 2.4, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, b.effect === 'explosion' ? 4.5 : 2.4, 0, Math.PI * 2);
         ctx.fill();
       }
     }

@@ -282,8 +282,12 @@ export class Combat {
         range: def.range,
         pierce: def.pierce,
         rarity: weapon.rarity,
-        kind: def.kind === 'beam' ? 'rayo' : 'bala',
+        kind: def.kind === 'beam' || def.kind === 'cadena' ? 'rayo' : 'bala',
         owner: player,
+        // Efecto del proyectil (armas de JULEN DEFENSA). Solo lo
+        // entienden los zombis: a un personaje le da igual.
+        effect: def.bulletEffect || null,
+        radius: def.bulletRadius || 0,
       });
     }
 

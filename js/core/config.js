@@ -257,6 +257,13 @@ export const CONFIG = {
     // aqui estaba libre). Con la rueda abierta, 1..6 eligen directo.
     emoteWheel: ['KeyB'],
 
+    // JULEN DEFENSA: T abre la tienda, G mejora lo que tengas al lado y
+    // P empieza la oleada sin esperar. Las tres estaban libres (la N no:
+    // la usa el boton de silenciar).
+    defenseShop: ['KeyT'],
+    defenseUpgrade: ['KeyG'],
+    defenseReady: ['KeyP'],
+
     // Vehiculos: la V estaba libre (E, F, R, Q, Z, X, C, M y H ya se usan)
     vehicle: ['KeyV'],
 

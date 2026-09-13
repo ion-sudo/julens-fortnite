@@ -21,6 +21,7 @@ import { Menu } from './ui/menu.js';
 import { showFatalError, watchRuntimeErrors } from './core/boot.js';
 import { BootScreen } from './ui/bootScreen.js';
 import { AudioPanel } from './ui/audioPanel.js';
+import { PAVOS_POR_OLEADA } from './data/defense.js';
 import { contarVisita, formatear } from './core/contador.js';
 
 const canvas = document.getElementById('game-canvas');
@@ -108,48 +109,73 @@ function arrancar() {
     menu.show('minigames');
   };
 
+  /**
+   * Reparte lo que da una partida terminada y arma el aviso.
+   *
+   * Lo comparten las dos formas de acabar: salir al menu y, en los modos
+   * que cuentan como partida (JULEN DEFENSA), el boton REINTENTAR.
+   * @returns {string|null} el texto del aviso, o null si no se llego a jugar
+   */
+  const repartirPremios = (resumen) => {
+    if (!resumen.played) return null;
+
+    const ganado = profile.addMatchReward();
+    const partes = [`+${ganado} pavos`];
+
+    // JULEN DEFENSA: un extra por cada oleada aguantada.
+    if (resumen.waves > 0) {
+      const extra = resumen.waves * PAVOS_POR_OLEADA;
+      profile.addVbucks(extra);
+      partes.push(`+${extra} por ${resumen.waves} oleada(s)`);
+    }
+
+    const mis = resumen.missions || [];
+    if (mis.length) {
+      const extra = mis.reduce((a, m) => a + m.reward, 0);
+      partes.push(`+${extra} por ${mis.length} mision(es)`);
+    }
+
+    const xp = resumen.xp;
+    if (xp && xp.ganada > 0) {
+      partes.push(`+${xp.ganada} XP`);
+      if (xp.subidos.length) {
+        partes.push(xp.subidos.length === 1
+          ? `¡NIVEL ${xp.nivel}!`
+          : `¡${xp.subidos.length} niveles! Vas por el ${xp.nivel}`);
+      }
+      // Y lo que haya soltado el pase de batalla al subir.
+      if (xp.premios?.length) {
+        partes.push(`${xp.premios.length} recompensa(s) del pase`);
+      }
+    }
+
+    return partes.join(' · ');
+  };
+
   game.onExitToMenu = () => {
-    // Si lo que estaba en marcha era un minijuego, no cuenta como partida
-    // ni da los 50 pavos: se vuelve al menu y ya.
-    if (game.minigame) {
+    // Un minijuego de entreno no cuenta como partida ni da pavos: se
+    // vuelve al menu y ya.
+    if (game.minigame && !game.minigame.countsAsMatch) {
       game.endMinigame();
       menu.show('home');
       return;
     }
 
-    const resumen = game.endMatch();
+    // Una partida normal, o un modo que cuenta como partida.
+    const resumen = game.minigame ? game.endCountedMinigame() : game.endMatch();
+    const texto = repartirPremios(resumen);
+    menu.show('home');
+    if (texto) menu.toast(texto);
+  };
 
-    if (resumen.played) {
-      const ganado = profile.addMatchReward();
-      menu.show('home');
-
-      // Se avisa de todo lo que ha dado la partida: pavos, misiones y XP.
-      const partes = [`+${ganado} pavos`];
-
-      const mis = resumen.missions || [];
-      if (mis.length) {
-        const extra = mis.reduce((a, m) => a + m.reward, 0);
-        partes.push(`+${extra} por ${mis.length} mision(es)`);
-      }
-
-      const xp = resumen.xp;
-      if (xp && xp.ganada > 0) {
-        partes.push(`+${xp.ganada} XP`);
-        if (xp.subidos.length) {
-          partes.push(xp.subidos.length === 1
-            ? `¡NIVEL ${xp.nivel}!`
-            : `¡${xp.subidos.length} niveles! Vas por el ${xp.nivel}`);
-        }
-        // Y lo que haya soltado el pase de batalla al subir.
-        if (xp.premios?.length) {
-          partes.push(`${xp.premios.length} recompensa(s) del pase`);
-        }
-      }
-
-      menu.toast(partes.join(' · '));
-    } else {
-      menu.show('home');
-    }
+  // REINTENTAR en un modo que cuenta como partida: se cobra la que acaba
+  // de terminar y se empieza otra con lo mismo equipado.
+  game.onRetryCounted = () => {
+    const loadout = game.loadout;
+    const modo = game.mode;
+    const texto = repartirPremios(game.endCountedMinigame());
+    game.startMatch(loadout, modo);
+    if (texto) game.showMessage(texto, 'legendary');
   };
 
   menu.show('home');

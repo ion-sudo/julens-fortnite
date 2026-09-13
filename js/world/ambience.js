@@ -67,6 +67,8 @@ const CLIMAS = [
   { id: 'nublado', nombre: 'Nublado', peso: 24, velo: { r: 150, g: 160, b: 180 }, alpha: 0.12, lluvia: 0 },
   { id: 'lluvia', nombre: 'Lluvia', peso: 20, velo: { r: 120, g: 140, b: 170 }, alpha: 0.2, lluvia: 150 },
   { id: 'niebla', nombre: 'Niebla', peso: 10, velo: { r: 205, g: 212, b: 225 }, alpha: 0.16, lluvia: 0 },
+  // Peso 0: no sale en el sorteo. Solo la pide JULEN DEFENSA de noche.
+  { id: 'tormenta', nombre: 'Tormenta', peso: 0, velo: { r: 90, g: 100, b: 130 }, alpha: 0.18, lluvia: 260 },
 ];
 
 /**
@@ -103,6 +105,16 @@ export class Ambience {
     this.estrellas = [];
     /** Gotas de lluvia, recicladas sin parar. */
     this.gotas = [];
+
+    /** RAYOS: solo con tormenta y cuando alguien los pide. */
+    this.rayos = false;
+    /** Fogonazo de luz del ultimo rayo, de 1 a 0. */
+    this.flash = 0;
+    /** El rayo que se esta viendo ahora: { x, vida, semilla }. */
+    this.rayo = null;
+    this._proxRayo = 2;
+    /** Aviso al caer un rayo (para el sonido del trueno). */
+    this.onRayo = null;
   }
 
   /* =============================================================
@@ -133,10 +145,39 @@ export class Ambience {
       });
     }
 
+    this._crearGotas(rng);
+    this.rayos = false;
+    this.flash = 0;
+    this.rayo = null;
+  }
+
+  /** Gotas para el clima en curso (ninguna si no llueve). */
+  _crearGotas(rng = Math.random) {
     this.gotas = [];
     for (let i = 0; i < this.clima.lluvia; i++) {
       this.gotas.push({ x: rng(), y: rng(), v: 0.55 + rng() * 0.5, l: 9 + rng() * 12 });
     }
+  }
+
+  /**
+   * CONTROL MANUAL del cielo, para los modos que mandan ellos.
+   *
+   * JULEN DEFENSA lo usa para que sea de DIA mientras te preparas y de
+   * NOCHE con tormenta y rayos durante cada oleada. Lo que no se pasa
+   * se queda como estaba.
+   * @param {object} o { hora, clima, rayos }
+   */
+  forzar({ hora = null, clima = null, rayos = null } = {}) {
+    this.enabled = true;
+    if (hora !== null) this.hora = ((hora % 1) + 1) % 1;
+    if (clima) {
+      const c = CLIMAS.find((x) => x.id === clima);
+      if (c && c !== this.clima) {
+        this.clima = c;
+        this._crearGotas();
+      }
+    }
+    if (rayos !== null) this.rayos = rayos;
   }
 
   /** Nombre del momento, para el aviso del principio de partida. */
@@ -166,6 +207,24 @@ export class Ambience {
   update(dt) {
     if (!this.enabled) return;
     this.hora = (this.hora + dt / DIA_COMPLETO) % 1;
+    this._actualizarRayos(dt);
+  }
+
+  /** Cada pocos segundos, un rayo: fogonazo, trazo y trueno. */
+  _actualizarRayos(dt) {
+    this.flash = Math.max(0, this.flash - dt * 2.8);
+    if (this.rayo) {
+      this.rayo.vida -= dt;
+      if (this.rayo.vida <= 0) this.rayo = null;
+    }
+    if (!this.rayos) return;
+
+    this._proxRayo -= dt;
+    if (this._proxRayo > 0) return;
+    this._proxRayo = 2.5 + Math.random() * 5;
+    this.flash = 1;
+    this.rayo = { x: 0.1 + Math.random() * 0.8, vida: 0.28, semilla: Math.random() };
+    this.onRayo?.();
   }
 
   /**
@@ -224,7 +283,8 @@ export class Ambience {
 
     // --- Estrellas ---
     // Solo con la noche entrada, y nunca con el cielo tapado.
-    const tapado = this.clima.id === 'nublado' || this.clima.id === 'lluvia' || this.clima.id === 'niebla';
+    // Con cualquier clima que no sea despejado, el cielo esta tapado.
+    const tapado = this.clima.id !== 'despejado';
     if (osc > 0.45 && !tapado) {
       const fuerza = (osc - 0.45) / 0.55;
       for (const e of this.estrellas) {
@@ -298,6 +358,40 @@ export class Ambience {
       ctx.fillStyle = `rgba(${v.r}, ${v.g}, ${v.b}, ${a})`;
       ctx.fillRect(0, 0, view.width, view.height);
     }
+
+    // --- Rayos ---
+    if (this.rayo) this._dibujarRayo(ctx, view);
+    if (this.flash > 0) {
+      ctx.fillStyle = `rgba(220, 230, 255, ${this.flash * 0.32})`;
+      ctx.fillRect(0, 0, view.width, view.height);
+    }
+  }
+
+  /** Un rayo en zigzag, siempre igual mientras dura (va con semilla). */
+  _dibujarRayo(ctx, view) {
+    const r = this.rayo;
+    let x = r.x * view.width;
+    let y = 0;
+    let s = Math.floor(r.semilla * 233280);
+    const azar = () => {
+      s = (s * 9301 + 49297) % 233280;
+      return s / 233280;
+    };
+
+    ctx.save();
+    ctx.strokeStyle = `rgba(235, 240, 255, ${Math.min(1, r.vida * 4)})`;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#bcd4ff';
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    while (y < view.height * 0.62) {
+      y += 22 + azar() * 30;
+      x += (azar() - 0.5) * 70;
+      ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.restore();
   }
 
   /* =============================================================

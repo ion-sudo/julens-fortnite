@@ -57,6 +57,8 @@ export const XP = {
   TREE: 6,
   /** Por cada pez pescado. */
   FISH: 12,
+  /** Por cada oleada aguantada en JULEN DEFENSA. */
+  WAVE: 45,
   /** Por completar una mision. */
   MISSION: 150,
   /** Por cada 100 de dano hecho. */
@@ -77,6 +79,7 @@ export const XP_LABELS = {
   BUILDING: 'Edificios',
   TREE: 'Arboles',
   FISH: 'Peces',
+  WAVE: 'Oleadas',
   MISSION: 'Misiones',
   DAMAGE_100: 'Dano hecho',
   MINIGAME: 'Minijuego',

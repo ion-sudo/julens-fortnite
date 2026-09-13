@@ -320,6 +320,22 @@ export function playShot(kind, dist = 0) {
       thump({ freq: 150, toFreq: 55, duration: 0.1, volume: 0.45 * v * grave });
       break;
 
+    // --- Las armas de JULEN DEFENSA ---
+    case 'cohetes':
+      noise({ duration: 0.35, volume: 0.35 * v, freq: 600, sweepTo: 1600, q: 0.6, type: 'lowpass' });
+      thump({ freq: 110, toFreq: 40, duration: 0.25, volume: 0.7 * v * grave });
+      break;
+
+    case 'hielo':
+      tone({ freq: 1800, toFreq: 900, type: 'triangle', duration: 0.16, volume: 0.22 * v, curve: 'linear' });
+      noise({ duration: 0.06, volume: 0.15 * v, freq: 5000, q: 2 });
+      break;
+
+    case 'cadena':
+      tone({ freq: 220, toFreq: 1400, type: 'sawtooth', duration: 0.12, volume: 0.2 * v, curve: 'linear' });
+      noise({ duration: 0.1, volume: 0.22 * v, freq: 3000, q: 3 });
+      break;
+
     default:   // fusiles, subfusiles y ametralladora
       noise({ duration: 0.08, volume: 0.36 * v, freq: 1900, sweepTo: 500, q: 1.1 });
       thump({ freq: 140, toFreq: 50, duration: 0.11, volume: 0.5 * v * grave });
@@ -489,6 +505,13 @@ export function playSupplyLandAt(x, y) {
   if (d >= 1) return;
   noise({ duration: 0.28, volume: 0.32 * (1 - d), freq: 700, sweepTo: 160, q: 0.7, type: 'lowpass' });
   thump({ freq: 130, toFreq: 40, duration: 0.3, volume: 0.55 * (1 - d) });
+}
+
+/** Trueno de la tormenta: un rugido grave que tarda en apagarse. */
+export function playTrueno() {
+  noise({ duration: 1.6, volume: 0.45, freq: 260, sweepTo: 60, q: 0.4, type: 'lowpass' });
+  thump({ freq: 90, toFreq: 28, duration: 1.2, volume: 0.6 });
+  noise({ duration: 0.25, volume: 0.25, freq: 1800, sweepTo: 400, q: 0.6, delay: 0.02 });
 }
 
 /** Subir de nivel Blitz / recompensa. */

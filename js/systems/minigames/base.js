@@ -59,6 +59,17 @@ export class Minigame {
     this.isRecord = false;
     /** Texto grande de la pantalla de fin. */
     this.resultText = '';
+
+    /**
+     * ¿Cuenta como PARTIDA de verdad? Los minijuegos no (son entreno).
+     * JULEN DEFENSA si: da pavos, XP de partida, pase y estadisticas al
+     * terminar, por el mismo camino que el battle royale.
+     */
+    this.countsAsMatch = false;
+    /** El modo pide que el clic no dispare ni construya (una tienda abierta). */
+    this.blocksActions = false;
+    /** El modo pide que el jugador no se mueva (esta tumbado). */
+    this.freezePlayer = false;
   }
 
   /* =============================================================
@@ -139,7 +150,8 @@ export class Minigame {
     // Los minijuegos entregan la XP al momento: son cortos y no tienen
     // pantalla de resumen con desglose como la partida.
     this.xpGanada = 0;
-    if (this.game.xp) {
+    // Los que cuentan como partida cobran su XP al salir, como la partida.
+    if (this.game.xp && !this.countsAsMatch) {
       this.game.xp.give('MINIGAME');
       this.xpGanada = XP.MINIGAME;
       if (this.isRecord) {

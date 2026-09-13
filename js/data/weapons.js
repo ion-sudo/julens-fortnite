@@ -27,6 +27,10 @@
  *   spinUp      segundos de "calentamiento" antes de disparar (minigun)
  *   recoil      empujon visual de la camara/arma
  *   effect      efecto especial en vez de disparar (de momento: 'rift')
+ *   bulletEffect  efecto de cada PROYECTIL al impactar (JULEN DEFENSA):
+ *               'explosion' (dano en area, radio `bulletRadius`),
+ *               'hielo' (ralentiza), 'cadena' (salta a otros), 'fuego'.
+ *               Solo lo entienden los zombis: a un personaje le da igual.
  *
  * El dibujo de cada arma esta en js/entities/weaponSprite.js (usa `kind`).
  */
@@ -148,11 +152,12 @@ export const WEAPONS = [
   },
   {
     id: 'llamas', order: 13, name: 'Lanzallamas', kind: 'llamas',
-    ammo: 'energia', modes: ['blitz'],
+    ammo: 'energia', modes: ['blitz', 'defensa'],
     dropWeight: 7, minRarity: 'uncommon',
     damage: 8, fireRate: 14, auto: true,
     pellets: 2, spread: 0.230, adsSpread: 0.170,
     speed: 780, range: 330, recoil: 1.2,
+    bulletEffect: 'fuego',
     desc: 'De cerca no hay quien lo aguante. De lejos, no llega ni al suelo.',
   },
   {
@@ -176,6 +181,42 @@ export const WEAPONS = [
     speed: 0, range: 0, recoil: 0,
     effect: 'rift',
     desc: 'Abre una grieta y te sube al cielo con la paravela. Para escapar.',
+  },
+
+  /* =============================================================
+     EXCLUSIVAS DE JULEN DEFENSA
+     Se compran en la tienda del modo. Cada proyectil lleva su efecto
+     (`bulletEffect`), que es lo que las hace utiles contra hordas.
+     ============================================================= */
+  {
+    id: 'lanzacohetes', order: 16, name: 'Lanzacohetes', kind: 'cohetes',
+    ammo: 'pesada', modes: ['defensa'],
+    dropWeight: 3, minRarity: 'rare',
+    damage: 90, fireRate: 0.9, auto: false,
+    pellets: 1, spread: 0.020, adsSpread: 0.006,
+    speed: 950, range: 1300, recoil: 7.0,
+    bulletEffect: 'explosion', bulletRadius: 130,
+    desc: 'Un cohete que revienta en area. Lo mejor contra un grupo.',
+  },
+  {
+    id: 'rifle-hielo', order: 17, name: 'Rifle de Hielo', kind: 'hielo',
+    ammo: 'energia', modes: ['defensa'],
+    dropWeight: 3, minRarity: 'rare',
+    damage: 22, fireRate: 4, auto: true,
+    pellets: 1, spread: 0.030, adsSpread: 0.010,
+    speed: 1700, range: 1100, recoil: 2.0,
+    bulletEffect: 'hielo',
+    desc: 'Cada impacto deja al zombi a camara lenta.',
+  },
+  {
+    id: 'cadena', order: 18, name: 'Arma de Rayo en Cadena', kind: 'cadena',
+    ammo: 'energia', modes: ['defensa'],
+    dropWeight: 3, minRarity: 'epic',
+    damage: 30, fireRate: 3, auto: true,
+    pellets: 1, spread: 0.020, adsSpread: 0.008,
+    speed: 2300, range: 900, recoil: 2.4,
+    bulletEffect: 'cadena',
+    desc: 'El rayo salta de un zombi a otro, hasta tres.',
   },
 ];
 
