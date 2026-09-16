@@ -18,7 +18,9 @@ import { DEFENSA, TORRES, TRAMPAS, TIENDA_ARMAS } from '../data/defense.js';
 import { control, segunControl } from './controlHints.js';
 
 const FUENTE = '"Trebuchet MS", sans-serif';
-const PANEL = { w: 820, h: 480 };
+// Ancha y a CUATRO columnas: con las torres, trampas y armas nuevas, a
+// tres columnas la pestana de armas ya no cabia en alto.
+const PANEL = { w: 1090, h: 480 };
 const PESTANAS = [
   { id: 'torres', nombre: 'TORRES' },
   { id: 'trampas', nombre: 'TRAMPAS' },
@@ -57,7 +59,7 @@ export function botonesTienda(view, pestana) {
     lista.push({ accion: 'pestana', valor: p.id, nombre: p.nombre, x: o.x + 24 + i * 150, y: o.y + 62, w: 140, h: 36 });
   });
 
-  const cols = 3;
+  const cols = 4;
   const cw = 250;
   const ch = 96;
   const gap = 14;
@@ -340,10 +342,13 @@ function tarjeta(ctx, b, m, encima) {
   let color = '#e8434f';
 
   if (b.tipo === 'torre') {
-    detalle = `Dano ${it.dano} · Alcance ${it.alcance}`;
+    detalle = it.repara
+      ? `Repara ${it.repara} de vida/s`
+      : `Dano ${it.dano} · Alcance ${it.alcance}`;
+    if (it.maximo) detalle += ` · max ${it.maximo}`;
     color = it.acento;
   } else if (b.tipo === 'trampa') {
-    detalle = `Dano ${it.dano} · ${it.usos} usos`;
+    detalle = it.dano > 0 ? `Dano ${it.dano} · ${it.usos} usos` : `Frena · ${it.usos} usos`;
     color = it.acento;
   } else if (it.arma) {
     const def = findWeapon(it.arma);

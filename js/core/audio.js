@@ -336,6 +336,16 @@ export function playShot(kind, dist = 0) {
       noise({ duration: 0.1, volume: 0.22 * v, freq: 3000, q: 3 });
       break;
 
+    case 'ballesta':
+      tone({ freq: 520, toFreq: 180, type: 'triangle', duration: 0.12, volume: 0.25 * v, curve: 'linear' });
+      noise({ duration: 0.05, volume: 0.12 * v, freq: 2600, q: 2 });
+      break;
+
+    case 'lanzagranadas':
+      thump({ freq: 150, toFreq: 60, duration: 0.18, volume: 0.6 * v * grave });
+      noise({ duration: 0.12, volume: 0.2 * v, freq: 700, sweepTo: 300, q: 0.8, type: 'lowpass' });
+      break;
+
     default:   // fusiles, subfusiles y ametralladora
       noise({ duration: 0.08, volume: 0.36 * v, freq: 1900, sweepTo: 500, q: 1.1 });
       thump({ freq: 140, toFreq: 50, duration: 0.11, volume: 0.5 * v * grave });

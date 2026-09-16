@@ -27,7 +27,10 @@ import { control, segunControl } from '../../ui/controlHints.js';
 /** Color de las balas de las torres segun su nivel. */
 const RAREZA_NIVEL = [null, 'rare', 'epic', 'legendary'];
 /** A que suena cada torre (reutiliza los disparos del juego). */
-const SONIDO_TORRE = { ametralladora: 'smg', canon: 'sniper', hielo: 'hielo', mortero: 'cohetes' };
+const SONIDO_TORRE = {
+  ametralladora: 'smg', canon: 'sniper', hielo: 'hielo', mortero: 'cohetes',
+  tesla: 'cadena', lanzallamas: 'llamas', francotiradora: 'sniper',
+};
 /** Ancho que ocupa una torre en el suelo. */
 const ANCHO_TORRE = 46;
 
@@ -56,6 +59,12 @@ export class DefenseStructures {
 
     if (x - w / 2 < this.mode.base.x + 70) return { ok: false, motivo: 'Demasiado pegado a la torre' };
     if (x + w / 2 > c.x1 - 70) return { ok: false, motivo: 'Ahi salen los zombis' };
+
+    // Algunas tienen tope (la de reparacion): si no, poner diez seria
+    // una torre inmortal.
+    if (def.maximo && this.lista.filter((s) => s.def.id === def.id).length >= def.maximo) {
+      return { ok: false, motivo: `Como mucho ${def.maximo} de ${def.name}` };
+    }
 
     for (const s of this.lista) {
       const w2 = this.ancho(s.def, s.tipo);
@@ -146,12 +155,27 @@ export class DefenseStructures {
     const cx = s.x;
     const cy = s.y - 44;
 
+    // La de reparacion no dispara: cura la torre.
+    if (d.repara) {
+      this._reparar(s, dt);
+      return;
+    }
+
+    // A quien apunta: al mas cercano o, la francotiradora, al que MAS
+    // vida tenga a tiro (suele ser una mole o el jefe).
     let mejor = null;
     let mejorD = d.alcance;
+    let mejorVida = -1;
     for (const z of zombies) {
       if (z.dead) continue;
       const dist = Math.abs(z.cx - cx);
-      if (dist < mejorD) { mejorD = dist; mejor = z; }
+      if (dist > d.alcance) continue;
+      if (d.objetivo === 'mas-vida') {
+        if (z.health > mejorVida) { mejorVida = z.health; mejor = z; }
+      } else if (dist < mejorD) {
+        mejorD = dist;
+        mejor = z;
+      }
     }
     if (!mejor) return;
 
@@ -163,13 +187,13 @@ export class DefenseStructures {
     game.bullets.spawn({
       x: cx + Math.cos(s.angle) * 30,
       y: cy + Math.sin(s.angle) * 30,
-      angle: s.angle + (Math.random() - 0.5) * 0.03,
+      angle: s.angle + (Math.random() - 0.5) * (d.dispersion ?? 0.03),
       speed: d.velocidadBala,
       damage: Math.round(d.dano * multNivel(s.nivel)),
-      range: d.alcance + 160,
+      range: d.alcanceBala ?? d.alcance + 160,
       pierce: !!d.perfora,
       rarity: RAREZA_NIVEL[s.nivel],
-      kind: d.efecto === 'hielo' ? 'rayo' : 'bala',
+      kind: d.efecto === 'hielo' || d.efecto === 'cadena' ? 'rayo' : 'bala',
       // Las balas son del jugador: asi nunca le dan a el.
       owner: this.mode.player,
       effect: d.efecto || null,
@@ -177,6 +201,20 @@ export class DefenseStructures {
     });
     this.mode.particles.muzzleFlash(cx + Math.cos(s.angle) * 32, cy + Math.sin(s.angle) * 32, s.angle, d.acento, 0.8);
     playShotAt(SONIDO_TORRE[d.id] || 'ar', cx, cy);
+  }
+
+  /** Torre de Reparacion: devuelve vida a la torre poco a poco. */
+  _reparar(s, dt) {
+    const base = this.mode.base;
+    if (base.vida >= base.vidaMax || base.vida <= 0) return;
+    base.vida = Math.min(base.vidaMax, base.vida + s.def.repara * multNivel(s.nivel) * dt);
+
+    // Un destello de vez en cuando, para que se vea que esta trabajando.
+    if (s.cooldown <= 0) {
+      s.cooldown = 0.7;
+      s.flash = 1;
+      this.mode.particles.spark(base.x, base.y - 120, '#5fd14a', 8, 160);
+    }
   }
 
   /** Cada trampa a lo suyo. */
@@ -190,7 +228,8 @@ export class DefenseStructures {
     if (d.id === 'dardos') {
       s.cooldown = Math.max(0, s.cooldown - dt);
       if (s.cooldown > 0) return;
-      const hay = zombies.some((z) => !z.dead && !z.enAire && z.cx > s.x && z.cx - s.x < d.alcance);
+      // Los dardos van a ras de suelo: a un volador no le llegan.
+      const hay = zombies.some((z) => !z.dead && !z.enAire && !z.def.vuela && z.cx > s.x && z.cx - s.x < d.alcance);
       if (!hay) return;
       s.cooldown = d.espera;
       this._gastar(s);
@@ -223,7 +262,8 @@ export class DefenseStructures {
     const x0 = s.x - d.w / 2;
     const x1 = s.x + d.w / 2;
     for (const z of zombies) {
-      if (z.dead || z.enAire) continue;
+      // Para pisar una trampa hay que ir por el suelo.
+      if (z.dead || z.enAire || z.def.vuela) continue;
       if (z.x > x1 || z.x + z.w < x0) continue;
 
       // Respiro entre golpe y golpe al MISMO zombi: si no, cruzarla le
@@ -248,6 +288,18 @@ export class DefenseStructures {
       } else if (d.id === 'lanzador') {
         z.lanzar(d.empuje, 260, dano, jugador);
         this.mode.particles.puff(s.x, s.y - 10, 'rgba(200, 230, 160, 0.6)', 6);
+      } else if (d.id === 'pegamento') {
+        // Sin dano: los deja pegados, casi quietos, un buen rato.
+        z.ralentizar(d.ralentiza, d.duracion);
+        this.mode.particles.puff(z.cx, pie, 'rgba(40, 30, 20, 0.6)', 3);
+      } else if (d.id === 'mina') {
+        // Revienta en area: a este y a todos los de alrededor.
+        this.mode.explosion(s.x, s.y - 14, d.radio, dano, jugador);
+        break;   // un pisoton, una explosion
+      } else if (d.id === 'empujador') {
+        // Golpe seco hacia atras, a ras de suelo: de vuelta al portal.
+        z.lanzar(d.fuerza, d.empuje, dano, jugador);
+        this.mode.particles.puff(s.x, s.y - 10, 'rgba(255, 200, 120, 0.6)', 6);
       }
 
       if (s.usos <= 0) break;

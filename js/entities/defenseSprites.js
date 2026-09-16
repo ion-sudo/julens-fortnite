@@ -28,6 +28,14 @@ export function drawZombie(ctx, z, time, alpha) {
   const quieto = z.congelado > 0 || z.dead || z.enAire;
   const andar = quieto ? 0 : Math.sin(z.fase * (d.velocidad / 9));
 
+  // Los voladores dejan la sombra en el suelo, lejos de sus pies.
+  if (d.vuela && !z.dead) {
+    ctx.fillStyle = `rgba(0, 0, 0, ${0.22 * alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(cx, z.laneY, 18 * s, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(cx, pie);
@@ -36,15 +44,37 @@ export function drawZombie(ctx, z, time, alpha) {
   // Escala negativa en X: se dibuja mirando a +X y sale mirando a la izquierda.
   ctx.scale(-s, s);
 
-  // Sombra
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 16, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Sombra (la del volador ya esta pintada en el suelo)
+  if (!d.vuela) {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 16, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
   const blanco = z.hitFlash > 0;
   const piel = blanco ? '#ffffff' : d.color;
   const ropa = blanco ? '#ffffff' : d.ropa;
+
+  // Alas de murcielago batiendo (solo el volador)
+  if (d.vuela) {
+    const aleteo = Math.sin(z.fase * 16);
+    ctx.fillStyle = blanco ? '#ffffff' : '#3b2f45';
+    for (const lado of [-1, 1]) {
+      ctx.save();
+      ctx.translate(0, -40);
+      ctx.scale(1, 0.75 + aleteo * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(lado * 28, -16);
+      ctx.lineTo(lado * 22, -2);
+      ctx.lineTo(lado * 34, 6);
+      ctx.lineTo(lado * 10, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 
   // Piernas
   ctx.lineCap = 'round';
@@ -62,6 +92,26 @@ export function drawZombie(ctx, z, time, alpha) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
   ctx.fillRect(-6, -30, 5, 4);
   ctx.fillRect(3, -40, 4, 3);
+
+  // La bomba del zombi bomba, con la mecha chispeando
+  if (d.explota) {
+    ctx.fillStyle = '#2a2a2e';
+    ctx.beginPath();
+    ctx.arc(1, -32, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c8a06a';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(4, -38);
+    ctx.quadraticCurveTo(8, -44, 5, -48);
+    ctx.stroke();
+    if (Math.sin(time * 14) > 0) {
+      ctx.fillStyle = '#ff5a3a';
+      ctx.beginPath();
+      ctx.arc(5, -48, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
   // Brazos estirados hacia delante; al golpear, mas todavia.
   const brazo = Math.sin(z.fase * 3) * 2 + (z.atacando > 0 ? 8 : 0);
@@ -264,6 +314,30 @@ export function drawTower(ctx, s, time) {
     ctx.moveTo(8, -6); ctx.lineTo(34, 0); ctx.lineTo(8, 6);
     ctx.closePath();
     ctx.fill();
+  } else if (def.id === 'tesla') {
+    // Bobina y una esfera cargada: no tiene canon.
+    ctx.fillStyle = '#c8a04a';
+    for (const bx of [6, 11, 16]) ctx.fillRect(bx, -7, 3, 14);
+    ctx.fillStyle = def.acento;
+    ctx.beginPath();
+    ctx.arc(24, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (def.id === 'lanzallamas') {
+    ctx.fillRect(6, -5, 22, 10);
+    ctx.fillStyle = def.acento;
+    ctx.beginPath();
+    ctx.moveTo(26, -8); ctx.lineTo(34, -10); ctx.lineTo(34, 10); ctx.lineTo(26, 8);
+    ctx.closePath();
+    ctx.fill();
+  } else if (def.id === 'francotiradora') {
+    ctx.fillRect(4, -3, 46, 6);
+    ctx.fillStyle = def.acento;
+    ctx.fillRect(10, -9, 12, 5);
+  } else if (def.id === 'reparadora') {
+    // Una cruz en vez de canon: esta no dispara.
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-3, -10, 6, 20);
+    ctx.fillRect(-10, -3, 20, 6);
   } else {
     ctx.fillRect(2, -8, 20, 16);
     ctx.fillStyle = def.acento;
@@ -279,6 +353,15 @@ export function drawTower(ctx, s, time) {
   ctx.fill();
 
   pips(ctx, x, y - 12, s.nivel);
+
+  // La de reparacion lanza un anillo verde cada vez que cura.
+  if (def.repara && s.flash > 0) {
+    ctx.strokeStyle = `rgba(95, 209, 74, ${s.flash})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(x, hy, 22 + (1 - s.flash) * 20, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -397,6 +480,57 @@ export function drawTrap(ctx, s, time) {
       ctx.fillStyle = d.acento;
       ctx.beginPath();
       ctx.moveTo(x, y - 38 + baja); ctx.lineTo(x + 8, y - 28 + baja); ctx.lineTo(x - 8, y - 28 + baja);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+
+    case 'pegamento': {
+      // Charco de brea con burbujas
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.ellipse(x, y - 3, w / 2, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = d.acento;
+      for (let i = 0; i < 3; i++) {
+        const bx = x - w / 3 + i * (w / 3);
+        const r = 2.5 + 1.5 * Math.abs(Math.sin(time * 2 + i * 2 + x));
+        ctx.beginPath();
+        ctx.arc(bx, y - 6, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      break;
+    }
+
+    case 'mina': {
+      ctx.fillStyle = d.color;
+      ctx.beginPath();
+      ctx.ellipse(x, y - 4, w / 2, 7, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = '#3a3f4c';
+      ctx.fillRect(x - w / 2, y - 4, w, 4);
+      // Luz roja que parpadea (y se queda encendida al saltar)
+      const encendida = s.flash > 0 || Math.sin(time * 6 + x) > 0;
+      ctx.fillStyle = encendida ? d.acento : '#5a2020';
+      ctx.beginPath();
+      ctx.arc(x, y - 10, 3, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
+    case 'empujador': {
+      const golpe = s.flash > 0 ? 12 * s.flash : 0;
+      ctx.fillStyle = '#3a3f4c';
+      ctx.fillRect(x - w / 2, y - 6, w, 6);
+      // Placa que golpea hacia el portal (a la derecha)
+      ctx.fillStyle = d.color;
+      roundRectPath(ctx, x - 6 + golpe, y - 34, 12, 28, 3);
+      ctx.fill();
+      ctx.fillStyle = d.acento;
+      ctx.beginPath();
+      ctx.moveTo(x + 10 + golpe, y - 26);
+      ctx.lineTo(x + 20 + golpe, y - 20);
+      ctx.lineTo(x + 10 + golpe, y - 14);
       ctx.closePath();
       ctx.fill();
       break;

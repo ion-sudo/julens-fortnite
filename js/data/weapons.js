@@ -218,6 +218,36 @@ export const WEAPONS = [
     bulletEffect: 'cadena',
     desc: 'El rayo salta de un zombi a otro, hasta tres.',
   },
+  {
+    id: 'ballesta', order: 19, name: 'Ballesta Perforante', kind: 'ballesta',
+    ammo: 'pesada', modes: ['defensa'],
+    dropWeight: 3, minRarity: 'rare',
+    damage: 72, fireRate: 1.3, auto: false,
+    pellets: 1, spread: 0.012, adsSpread: 0.003,
+    speed: 1900, range: 1400, recoil: 3.0, pierce: true,
+    desc: 'Una flecha que atraviesa la fila entera.',
+  },
+  {
+    id: 'lanzagranadas', order: 20, name: 'Lanzagranadas', kind: 'lanzagranadas',
+    ammo: 'pesada', modes: ['defensa'],
+    dropWeight: 3, minRarity: 'rare',
+    damage: 55, fireRate: 1.7, auto: false,
+    pellets: 1, spread: 0.030, adsSpread: 0.010,
+    speed: 900, range: 900, recoil: 5.0,
+    bulletEffect: 'explosion', bulletRadius: 95,
+    desc: 'Dispara mas rapido que el lanzacohetes, en menos area.',
+  },
+  {
+    // Usa el dibujo del fusil de asalto: por fuera es uno normal.
+    id: 'incendiario', order: 21, name: 'Fusil Incendiario', kind: 'ar',
+    ammo: 'media', modes: ['defensa'],
+    dropWeight: 3, minRarity: 'uncommon',
+    damage: 20, fireRate: 7, auto: true,
+    pellets: 1, spread: 0.050, adsSpread: 0.016,
+    speed: 1500, range: 1100, recoil: 2.4,
+    bulletEffect: 'fuego',
+    desc: 'Un fusil de asalto con balas que prenden fuego.',
+  },
 ];
 
 /**

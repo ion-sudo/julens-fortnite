@@ -283,8 +283,8 @@ export const MODES = [
     name: 'Julen Defensa',
     tagline: 'Defiende la torre de noche',
     icon: 'defensa', color: '#e8434f',
-    desc: 'Aguanta 10 oleadas de zombis: disparas tu, colocas torres y ' +
-          'trampas, y de dia te preparas. Cada 5 oleadas, un jefe.',
+    desc: 'Aguanta 2 oleadas de zombis: disparas tu, colocas torres y ' +
+          'trampas, y de dia te preparas. La ultima trae de todo y un jefe.',
     bullets: ['Oleadas de zombis', 'Torres y trampas', 'Dia y noche', 'Jefes'],
     ready: true,
     rules: { launch: 'defensa' },

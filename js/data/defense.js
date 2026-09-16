@@ -14,8 +14,12 @@
    ============================================================= */
 
 export const DEFENSA = {
-  /** Oleadas que hay que aguantar para ganar. */
-  oleadas: 10,
+  /**
+   * Oleadas que hay que aguantar para ganar. Eran 10; ahora son 2 para
+   * partidas cortas. Se puede subir cuando se quiera: la ultima oleada
+   * siempre trae de todo y un jefe (ver composicionOleada).
+   */
+  oleadas: 2,
   /** Cada cuantas oleadas sale un JEFE (en la 5 y en la 10). */
   jefeCada: 5,
   /** Dinero con el que se empieza, para las primeras defensas. */
@@ -68,6 +72,33 @@ export const ZOMBIES = {
     w: 76, h: 128, dinero: 300,
     color: '#4e6b34', ropa: '#6b1d2a',
   },
+
+  /*
+   * VOLADOR: va por el aire (`altura` px por encima del camino), asi que
+   * pasa por encima de las trampas de suelo y de las paredes. Solo lo
+   * paran las torres, tus disparos y la trampa electrica.
+   */
+  volador: {
+    id: 'volador', name: 'Zombi Volador', vuela: true, altura: 130,
+    vida: 55, velocidad: 80, dano: 16, ritmo: 1.0,
+    w: 34, h: 48, dinero: 18,
+    color: '#7c8f5a', ropa: '#3a2f4a',
+  },
+
+  /*
+   * BOMBA: no golpea, REVIENTA contra lo primero que encuentra (la torre,
+   * una pared o tu). Si lo matas antes, explota igual... encima de los
+   * zombis que tenga al lado.
+   *   explosion.dano      a los zombis de alrededor
+   *   explosion.danoBase  a la torre o a la pared contra la que revienta
+   */
+  bomba: {
+    id: 'bomba', name: 'Zombi Bomba', explota: true,
+    explosion: { radio: 140, dano: 90, danoBase: 160 },
+    vida: 90, velocidad: 62, dano: 0, ritmo: 1.0,
+    w: 32, h: 60, dinero: 22,
+    color: '#8a9a50', ropa: '#7a2a2a',
+  },
 };
 
 /**
@@ -80,16 +111,28 @@ export const ZOMBIES = {
  * @param {number} n  numero de oleada (1, 2, 3...)
  */
 export function composicionOleada(n) {
+  // LA ULTIMA OLEADA TRAE DE TODO: todos los tipos de zombi y un jefe,
+  // sean cuantas sean las oleadas. Sin esto, en una partida corta (2
+  // oleadas) no llegaban a salir ni los voladores, ni las bombas, ni el
+  // jefe. Con 10 oleadas no cambia nada: la decima ya los traia todos.
+  const ultima = n >= DEFENSA.oleadas;
+
   const total = 6 + n * 3;
-  const rapidos = n >= 2 ? Math.round(total * Math.min(0.35, 0.08 + n * 0.03)) : 0;
-  const tanques = n >= 4 ? 1 + Math.floor((n - 4) * 0.8) : 0;
-  const normales = Math.max(3, total - rapidos - tanques);
+  const rapidos = (n >= 2 || ultima) ? Math.max(1, Math.round(total * Math.min(0.35, 0.08 + n * 0.03))) : 0;
+  const tanques = (n >= 4 || ultima) ? Math.max(1, 1 + Math.floor((n - 4) * 0.8)) : 0;
+  // Voladores desde la 3 (obligan a tener torres, porque las trampas de
+  // suelo no les tocan) y bombas desde la 5 (castigan dejar la torre sola).
+  const voladores = (n >= 3 || ultima) ? Math.max(1, Math.round(total * Math.min(0.2, 0.04 + n * 0.015))) : 0;
+  const bombas = (n >= 5 || ultima) ? Math.max(1, 1 + Math.floor((n - 5) * 0.6)) : 0;
+  const normales = Math.max(3, total - rapidos - tanques - voladores - bombas);
 
   const lista = [{ tipo: 'normal', cuantos: normales }];
   if (rapidos) lista.push({ tipo: 'rapido', cuantos: rapidos });
   if (tanques) lista.push({ tipo: 'tanque', cuantos: tanques });
+  if (voladores) lista.push({ tipo: 'volador', cuantos: voladores });
+  if (bombas) lista.push({ tipo: 'bomba', cuantos: bombas });
 
-  const jefe = n % DEFENSA.jefeCada === 0;
+  const jefe = n % DEFENSA.jefeCada === 0 || ultima;
   if (jefe) lista.push({ tipo: 'jefe', cuantos: 1 });
 
   return {
@@ -102,7 +145,8 @@ export function composicionOleada(n) {
     /** Segundos entre zombi y zombi (cada vez salen mas seguidos). */
     ritmo: Math.max(0.45, 1.5 - n * 0.09),
     /** El segundo jefe aguanta bastante mas que el primero. */
-    vidaJefe: 1 + (n / DEFENSA.jefeCada - 1) * 0.7,
+    // (nunca por debajo de la vida normal: un jefe temprano no es un jefe flojo)
+    vidaJefe: Math.max(1, 1 + (n / DEFENSA.jefeCada - 1) * 0.7),
   };
 }
 
@@ -111,7 +155,13 @@ export function composicionOleada(n) {
    -------------------------------------------------------------
    precio, alcance (px), dano, cadencia (disparos/s), velocidadBala,
    efecto del proyectil ('hielo' ralentiza, 'explosion' hace dano en
-   area con `radio`), perfora (atraviesa zombis).
+   area con `radio`, 'cadena' salta a otros, 'fuego' quema), perfora
+   (atraviesa zombis). Y opcionales:
+     dispersion   lo que se abre cada disparo (por defecto, casi nada)
+     alcanceBala  hasta donde llega la bala (por defecto, alcance + 160)
+     objetivo     'mas-vida': apunta al que mas vida tenga, no al cercano
+     repara       no dispara: cura la torre esa vida por segundo
+     maximo       cuantas se pueden poner como mucho
    ============================================================= */
 
 export const TORRES = [
@@ -141,6 +191,33 @@ export const TORRES = [
     precio: 320, alcance: 820, dano: 55, cadencia: 0.55, velocidadBala: 1100,
     efecto: 'explosion', radio: 120,
     color: '#5a4b3a', acento: '#ff8a3d',
+  },
+  {
+    id: 'tesla', name: 'Torre Tesla',
+    desc: 'Un rayo que salta de zombi en zombi.',
+    precio: 280, alcance: 480, dano: 24, cadencia: 1.1, velocidadBala: 2200,
+    efecto: 'cadena',
+    color: '#34405c', acento: '#ffe34a',
+  },
+  {
+    id: 'lanzallamas', name: 'Torre Lanzallamas',
+    desc: 'De cerca, los deja ardiendo.',
+    precio: 230, alcance: 300, dano: 6, cadencia: 9, velocidadBala: 760,
+    efecto: 'fuego', dispersion: 0.22, alcanceBala: 340,
+    color: '#5a3a2a', acento: '#ff7a2a',
+  },
+  {
+    id: 'francotiradora', name: 'Torre Francotiradora',
+    desc: 'Todo el camino. Apunta al que mas vida tiene.',
+    precio: 350, alcance: 1400, dano: 150, cadencia: 0.35, velocidadBala: 2600,
+    perfora: true, objetivo: 'mas-vida',
+    color: '#3f4a3a', acento: '#b45cf0',
+  },
+  {
+    id: 'reparadora', name: 'Torre de Reparacion',
+    desc: 'No dispara: va curando la torre.',
+    precio: 400, repara: 10, maximo: 2,
+    color: '#2f5a3a', acento: '#5fd14a',
   },
 ];
 
@@ -188,6 +265,26 @@ export const TRAMPAS = [
     precio: 130, usos: 60, dano: 18, espera: 0.55, w: 34, alcance: 300,
     color: '#6b4522', acento: '#e8d8b0',
   },
+  {
+    // ralentiza: a que velocidad los deja (0,25 = una cuarta parte)
+    id: 'pegamento', name: 'Charco de Brea',
+    desc: 'No hace dano, pero los deja casi quietos.',
+    precio: 70, usos: 40, dano: 0, espera: 0.6, w: 84, ralentiza: 0.25, duracion: 3,
+    color: '#1f1a17', acento: '#4a3b30',
+  },
+  {
+    id: 'mina', name: 'Mina',
+    desc: 'Explota en area al pisarla. Pocos usos.',
+    precio: 150, usos: 3, dano: 110, espera: 1.5, w: 44, radio: 130,
+    color: '#4a4f3a', acento: '#ff3b3b',
+  },
+  {
+    // empuje: hacia atras; fuerza: hacia arriba (poca: va a ras de suelo)
+    id: 'empujador', name: 'Muro Empujador',
+    desc: 'Los devuelve de un golpe hacia el portal.',
+    precio: 120, usos: 18, dano: 14, espera: 0.8, w: 40, empuje: 560, fuerza: 260,
+    color: '#6b5a3a', acento: '#ffb03a',
+  },
 ];
 
 /* =============================================================
@@ -232,4 +329,7 @@ export const TIENDA_ARMAS = [
   { id: 'rifle-hielo', arma: 'rifle-hielo', rareza: 'epic', precio: 260 },
   { id: 'cadena', arma: 'cadena', rareza: 'epic', precio: 300 },
   { id: 'lanzacohetes', arma: 'lanzacohetes', rareza: 'legendary', precio: 420 },
+  { id: 'incendiario', arma: 'incendiario', rareza: 'epic', precio: 200 },
+  { id: 'ballesta', arma: 'ballesta', rareza: 'epic', precio: 240 },
+  { id: 'lanzagranadas', arma: 'lanzagranadas', rareza: 'legendary', precio: 360 },
 ];

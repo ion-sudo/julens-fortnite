@@ -18,6 +18,10 @@
  *   congelado  quieto del todo (trampa congelante)
  *   quema      pierde vida poco a poco (fuego)
  *   enAire     volando por un lanzador; al caer se hace dano
+ *
+ * Y dos tipos con reglas propias (ver data/defense.js):
+ *   vuela      va por el aire: ni trampas de suelo ni paredes le paran
+ *   explota    no golpea: revienta contra lo que tiene delante
  */
 
 import { drawZombie } from './defenseSprites.js';
@@ -44,7 +48,8 @@ export class Zombie {
     this.laneY = laneY;
     // Como el jugador: x/y es la esquina de arriba a la izquierda.
     this.x = x - def.w / 2;
-    this.y = laneY - def.h;
+    // Los voladores empiezan ya a su altura.
+    this.y = laneY - def.h - (def.vuela ? def.altura : 0);
     this.vx = 0;
     this.vy = 0;
 
@@ -155,6 +160,8 @@ export class Zombie {
 
   /** Por los aires, hacia atras. Al jefe casi ni lo mueve. */
   lanzar(fuerza, empujeX, danoCaida, fuente) {
+    // A uno que ya vuela no hay por donde lanzarlo.
+    if (this.def.vuela) return;
     const f = this.def.jefe ? 0.3 : 1;
     this.vy = -fuerza * f;
     this.vx = empujeX * f;
@@ -185,6 +192,12 @@ export class Zombie {
     this.golpeT = Math.max(0, this.golpeT - dt);
     this.atacando = Math.max(0, this.atacando - dt);
 
+    // Los voladores van por su cuenta (ver _volarBajo).
+    if (this.def.vuela) {
+      this._volarBajo(dt);
+      return;
+    }
+
     // Una granada de choque tambien puede mandarlo por los aires.
     if (!this.enAire && this.vy < -150) {
       this.enAire = true;
@@ -205,6 +218,38 @@ export class Zombie {
     if (this.congelado > 0) return;
 
     // ¿Algo delante? Se para y le pega.
+    const objetivo = this.mode.objetivoDelante(this);
+    if (objetivo) {
+      // El zombi bomba no golpea: revienta contra lo que tenga delante.
+      if (this.def.explota) {
+        this.mode.detonar(this, objetivo);
+        return;
+      }
+      if (this.golpeT <= 0) {
+        this.golpeT = this.def.ritmo;
+        this.atacando = 0.25;
+        objetivo.golpear(this.dano, this);
+      }
+      return;
+    }
+
+    const vel = this.def.velocidad * (this.lento > 0 ? this.lentoFactor : 1);
+    this.x -= vel * dt;
+    this.mode.limitarCarril(this);
+  }
+
+  /**
+   * VOLADOR: avanza a su altura con un vaiven suave. Solo se para al
+   * llegar a la torre: las trampas del suelo y las paredes no le tocan.
+   */
+  _volarBajo(dt) {
+    if (Math.abs(this.vx) > 1) {
+      this.x += this.vx * dt;
+      this.vx *= Math.max(0, 1 - dt * 6);
+    }
+    this.y = this.laneY - this.h - this.def.altura + Math.sin(this.fase * 3) * 8;
+    if (this.congelado > 0) return;
+
     const objetivo = this.mode.objetivoDelante(this);
     if (objetivo) {
       if (this.golpeT <= 0) {

@@ -4,7 +4,8 @@
  * JULEN DEFENSA: tower defense estilo Fortnite.
  *
  * Una TORRE con un faro rojo, un CAMINO llano y un PORTAL por el que
- * salen los zombis. Hay que aguantar 10 OLEADAS sin que tiren la torre.
+ * salen los zombis. Hay que aguantar todas las OLEADAS (DEFENSA.oleadas,
+ * en data/defense.js) sin que tiren la torre.
  *
  * EL RITMO es un ciclo de dia y noche:
  *
@@ -15,7 +16,7 @@
  *          armas del juego, las torres disparan solas y las trampas
  *          hacen lo suyo. Cuando cae el ultimo zombi, amanece.
  *
- * Cada 5 oleadas sale un JEFE. Cada zombi da dinero, y cada oleada
+ * Cada 5 oleadas, y siempre en la ultima, sale un JEFE. Cada zombi da dinero, y cada oleada
  * aguantada da un extra.
  *
  * REUTILIZA LO QUE YA HABIA: se monta con el sistema de minijuegos
@@ -486,6 +487,8 @@ export class JulenDefense extends Minigame {
   objetivoDelante(z) {
     // 1) La torre
     if (z.x <= this.base.x + 44) return this._golpeBase;
+    // Los voladores solo se paran en la torre: pasan por encima de todo lo demas.
+    if (z.def.vuela) return null;
 
     // 2) El jugador, pegado a el y a su altura
     const p = this.player;
@@ -505,6 +508,33 @@ export class JulenDefense extends Minigame {
       return this._golpeMuro;
     }
     return null;
+  }
+
+  /**
+   * El zombi bomba llega a algo y REVIENTA: se lleva un buen mordisco de
+   * la torre (o de la pared que tenga delante) y le da a todo lo que
+   * haya alrededor. No da dinero: no lo has matado tu.
+   */
+  detonar(z, objetivo) {
+    if (z.dead) return;
+    const e = z.def.explosion;
+
+    if (objetivo === this._golpeBase) {
+      this.base.vida = Math.max(0, this.base.vida - e.danoBase);
+      this.base.hitFlash = 0.3;
+    } else if (objetivo === this._golpeMuro) {
+      objetivo.estructura?.takeDamage(e.danoBase, null);
+    } else if (objetivo === this._golpeJugador) {
+      const p = this.player;
+      p.takeDamage(e.dano * 0.5, p.x + p.w / 2, p.y + 20, null);
+    }
+
+    // Muerto sin pasar por onZombieMuerto: ni dinero ni segunda explosion.
+    z._explotado = true;
+    z.health = 0;
+    z.dead = true;
+    z.muerte = 0.6;
+    this.explosion(z.cx, z.y + z.h / 2, e.radio, e.dano, null);
   }
 
   /** Que ningun zombi se salga del camino. */
@@ -569,6 +599,14 @@ export class JulenDefense extends Minigame {
 
   /** Lo llama cada zombi al morir. */
   onZombieMuerto(z, fuente) {
+    // El zombi bomba revienta al morir, encima de los que tenga al lado.
+    // Se marca ANTES de explotar: si la explosion mata a otra bomba, esa
+    // revienta tambien (reaccion en cadena), pero ninguna dos veces.
+    if (z.def.explota && !z._explotado) {
+      z._explotado = true;
+      this.explosion(z.cx, z.y + z.h / 2, z.def.explosion.radio, z.def.explosion.dano, fuente);
+    }
+
     const dinero = z.def.dinero + (z.def.jefe ? this.oleada * 40 : 0);
     this.dinero += dinero;
     this.bajas++;

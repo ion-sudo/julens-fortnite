@@ -59,6 +59,8 @@ export function drawWeapon(ctx, weapon, opts = {}) {
     case 'cohetes':      drawCohetes(ctx, tint); break;
     case 'hielo':        drawHielo(ctx, tint); break;
     case 'cadena':       drawCadena(ctx, tint); break;
+    case 'ballesta':     drawBallesta(ctx, tint); break;
+    case 'lanzagranadas': drawLanzagranadas(ctx, tint); break;
     default:             drawPistol(ctx, tint);
   }
 
@@ -86,6 +88,8 @@ export function muzzleDistance(weapon) {
     case 'cohetes':     return 58;
     case 'hielo':       return 46;
     case 'cadena':      return 44;
+    case 'ballesta':    return 48;
+    case 'lanzagranadas': return 40;
     default:            return 26;
   }
 }
@@ -660,4 +664,67 @@ function drawCadena(ctx, tint) {
   ctx.beginPath();
   ctx.arc(38.5, -9, 2, 0, Math.PI * 2);
   ctx.fill();
+}
+
+/** Ballesta Perforante: arco atravesado y una flecha cargada. */
+function drawBallesta(ctx, tint) {
+  grip(ctx, WOOD_DARK);
+
+  ctx.fillStyle = WOOD;
+  roundRectPath(ctx, -16, -12, 44, 9, 3);
+  ctx.fill();
+
+  // Arco
+  ctx.strokeStyle = METAL_DARK;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(30, -26);
+  ctx.quadraticCurveTo(40, -8, 30, 10);
+  ctx.stroke();
+
+  // Cuerda tensa
+  ctx.strokeStyle = '#e8e2d0';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(30, -26); ctx.lineTo(14, -8); ctx.lineTo(30, 10);
+  ctx.stroke();
+
+  // Flecha, con la punta del color de la rareza
+  ctx.strokeStyle = '#d8c8a0';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(12, -8); ctx.lineTo(44, -8);
+  ctx.stroke();
+  ctx.fillStyle = tint;
+  ctx.beginPath();
+  ctx.moveTo(44, -11); ctx.lineTo(51, -8); ctx.lineTo(44, -5);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** Lanzagranadas: tambor gordo con seis granadas y canon corto y ancho. */
+function drawLanzagranadas(ctx, tint) {
+  grip(ctx);
+
+  ctx.fillStyle = METAL;
+  roundRectPath(ctx, -14, -13, 26, 11, 3);
+  ctx.fill();
+
+  ctx.fillStyle = METAL_DARK;
+  ctx.beginPath();
+  ctx.arc(10, -4, 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = tint;
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.arc(10 + Math.cos(a) * 5.5, -4 + Math.sin(a) * 5.5, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = '#4c5a3a';
+  roundRectPath(ctx, 16, -14, 22, 12, 3);
+  ctx.fill();
+  ctx.fillStyle = METAL_DARK;
+  ctx.fillRect(34, -15, 5, 14);
 }
