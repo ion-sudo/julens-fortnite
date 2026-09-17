@@ -4,11 +4,16 @@
  * DISPARO AUTOMATICO: si tienes un enemigo en la mira y a tiro, el juego
  * aprieta el gatillo por ti.
  *
- * Estaba dentro de los controles tactiles, y por eso solo existia en
- * movil y iPad. Aqui esta aparte, asi que sirve para los dos sitios:
+ * ES UN TRUCO SECRETO. No tiene boton ni sale en la ayuda: es demasiado
+ * bueno como para dejarlo a la vista. Se enciende y se apaga asi:
  *
- *   MOVIL / IPAD  boton AUTO de la barra de arriba
- *   ORDENADOR     boton AUTO de la esquina (ui/autoButton.js) o la tecla O
+ *   ORDENADOR     tecleando J - U - L - I seguidas (cuatro teclas que no
+ *                 hacen nada en el juego, para no darle a esto sin querer)
+ *   MOVIL / IPAD  dejando el dedo 2 segundos quieto en la esquina de
+ *                 arriba a la izquierda (ver ui/touchControls.js)
+ *
+ * Viene APAGADO, y lo unico que se ve cuando esta puesto es un punto
+ * minusculo en la esquina de abajo a la izquierda.
  *
  * Lo unico que hace es "apretar el raton": el disparo, la cadencia, la
  * municion y el retroceso siguen siendo los de siempre (systems/combat.js).
@@ -28,14 +33,15 @@ const CLAVE = 'fortniteClash.auto.v1';
 /** Cono en el que busca enemigos alrededor de la mira (radianes). */
 const CONO = 0.35;
 
+/** El truco: estas teclas, en este orden. Ninguna hace nada en el juego. */
+const SECRETO = ['KeyJ', 'KeyU', 'KeyL', 'KeyI'];
+
 function cargar() {
   try {
-    const v = localStorage.getItem(CLAVE);
-    // Por defecto encendido: es lo comodo en movil, y en ordenador se
-    // apaga de un toque.
-    return v === null ? true : v === '1';
+    // Apagado de fabrica: hay que saberse el truco para encenderlo.
+    return localStorage.getItem(CLAVE) === '1';
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -167,6 +173,49 @@ export class AutoFire {
       mirar(t);
     }
     return mejor;
+  }
+
+  /* =============================================================
+     EL TRUCO DEL TECLADO
+     -------------------------------------------------------------
+     Hay que teclear J-U-L-I del tiron. Si te equivocas de tecla, o
+     tardas mas de dos segundos y medio entre una y otra, se empieza
+     de cero. Escribiendo tu nombre en el perfil no cuenta.
+     ============================================================= */
+
+  escucharSecreto(target = window) {
+    let paso = 0;
+    let ultima = 0;
+
+    target.addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+
+      const ahora = performance.now();
+      if (ahora - ultima > 2500) paso = 0;
+      ultima = ahora;
+
+      // Vale el codigo de la tecla y, si no llega (teclados en pantalla),
+      // la letra: es el mismo respaldo que usa core/input.js.
+      const esperada = SECRETO[paso];
+      const acierta = e.code ? e.code === esperada : (e.key || '').toLowerCase() === esperada.slice(3).toLowerCase();
+
+      if (!acierta) {
+        paso = 0;
+        return;
+      }
+
+      paso++;
+      if (paso < SECRETO.length) return;
+
+      paso = 0;
+      this.avisar(this.toggle());
+    }, true);
+  }
+
+  /** Aviso discreto: nada de carteles grandes, que es un secreto. */
+  avisar(encendido) {
+    this.game.showMessage(encendido ? 'auto' : 'auto no');
   }
 
   _apretar(valor) {

@@ -23,7 +23,6 @@ import { BootScreen } from './ui/bootScreen.js';
 import { AudioPanel } from './ui/audioPanel.js';
 import { DeviceMode } from './core/device.js';
 import { TouchControls } from './ui/touchControls.js';
-import { AutoButton } from './ui/autoButton.js';
 import { PAVOS_POR_OLEADA } from './data/defense.js';
 import { contarVisita, formatear } from './core/contador.js';
 
@@ -87,10 +86,6 @@ function arrancar() {
 
   // CONTROLES TACTILES: joystick y botones en pantalla para movil e iPad.
   // Solo se ven con `modo-tactil`; con teclado y raton no hacen nada.
-  // Boton AUTO de la esquina: el disparo automatico en ordenador (en
-  // movil ya sale en la barra de los controles tactiles).
-  const autoBoton = new AutoButton(game);
-
   const tactil = new TouchControls({ game, dispositivo });
   dispositivo.onChange = () => {
     resize();
@@ -210,7 +205,7 @@ function arrancar() {
   portada?.finish();
 
   // Expuesto en consola para depurar comodamente.
-  window.FC = { game, menu, profile, CONFIG, portada, audioPanel, dispositivo, tactil, autoBoton };
+  window.FC = { game, menu, profile, CONFIG, portada, audioPanel, dispositivo, tactil };
 
   // CONTADOR DE VISITAS. Va lo ultimo y sin esperar a nada: si el
   // servicio tarda o esta caido, el juego ya esta funcionando y el

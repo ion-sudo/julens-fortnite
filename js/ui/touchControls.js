@@ -39,6 +39,11 @@ import { SLOT_COUNT, PICKAXE_SLOT } from '../core/inventory.js';
 /** Donde se guardan los ajustes tactiles (aparte del perfil). */
 const CLAVE_AJUSTES = 'fortniteClash.touch.v1';
 
+/** Esquina (en pixeles) donde se esconde el truco del disparo automatico. */
+const ESQUINA_SECRETA = 100;
+/** Segundos que hay que aguantar el dedo ahi para encenderlo. */
+const ESPERA_SECRETA = 2000;
+
 /** Radio de recorrido del joystick, en pixeles de pantalla (va con el CSS). */
 const RADIO_JOYSTICK = 58;
 /** Hasta que parte de la pantalla (desde la izquierda) sale el joystick. */
@@ -86,7 +91,6 @@ const BOTONES = [
   { id: 'bailes', donde: 'barra', tipo: 'toque', accion: 'emoteWheel', icono: '♪', texto: 'BAILES' },
   { id: 'granada', donde: 'barra', tipo: 'especial', icono: '💣', texto: 'GRANADA' },
   { id: 'soltar', donde: 'barra', tipo: 'toque', accion: 'drop', icono: '⇩', texto: 'SOLTAR' },
-  { id: 'auto', donde: 'barra', tipo: 'especial', icono: '⚡', texto: 'AUTO' },
   { id: 'completa', donde: 'barra', tipo: 'especial', icono: '⛶', texto: 'PANTALLA' },
 
   // --- Solo cuando tocan ---
@@ -331,6 +335,17 @@ export class TouchControls {
       return;
     }
 
+    // EL TRUCO: el dedo quieto 2 segundos en la esquina de arriba a la
+    // izquierda enciende (o apaga) el disparo automatico. No hay boton en
+    // ninguna parte: es un secreto (ver systems/autoFire.js).
+    if (e.clientX < ESQUINA_SECRETA && e.clientY < ESQUINA_SECRETA) {
+      this._secretoDesde = { x: e.clientX, y: e.clientY };
+      this._secretoReloj = setTimeout(() => {
+        this._secretoReloj = null;
+        this.game.autoFire.avisar(this.game.autoFire.toggle());
+      }, ESPERA_SECRETA);
+    }
+
     if (e.clientX < window.innerWidth * ZONA_JOYSTICK && !this.joy) {
       this.joy = { id: e.pointerId, x0: e.clientX, y0: e.clientY, nx: 0, ny: 0 };
       this.punteros.set(e.pointerId, { tipo: 'joystick' });
@@ -343,6 +358,12 @@ export class TouchControls {
   }
 
   _mover(e) {
+    // Si el dedo del truco se mueve, ya no cuenta.
+    if (this._secretoReloj && this._secretoDesde) {
+      const d = Math.hypot(e.clientX - this._secretoDesde.x, e.clientY - this._secretoDesde.y);
+      if (d > 25) this._cancelarSecreto();
+    }
+
     const est = this.punteros.get(e.pointerId);
     if (!est) return;
 
@@ -365,6 +386,8 @@ export class TouchControls {
   }
 
   _arriba(e) {
+    this._cancelarSecreto();
+
     const est = this.punteros.get(e.pointerId);
     if (!est) return;
     this.punteros.delete(e.pointerId);
@@ -387,6 +410,13 @@ export class TouchControls {
   /* =============================================================
      BOTONES
      ============================================================= */
+
+  _cancelarSecreto() {
+    if (!this._secretoReloj) return;
+    clearTimeout(this._secretoReloj);
+    this._secretoReloj = null;
+    this._secretoDesde = null;
+  }
 
   _pulsarBoton(el, e) {
     const def = this.defs.get(el.dataset.id);
@@ -434,9 +464,6 @@ export class TouchControls {
       this.confirmar.hidden = false;
     } else if (id === 'granada') {
       this._siguienteGranada();
-    } else if (id === 'auto') {
-      const encendido = game.autoFire.toggle();
-      game.showMessage(encendido ? 'Disparo automatico: SI' : 'Disparo automatico: NO', 'rare');
     } else if (id === 'completa') {
       this._pantallaCompleta();
     } else if (id === 'cancelar') {
@@ -729,7 +756,6 @@ export class TouchControls {
     if (mg?.id === 'defensa' && mg.state !== 'fin') c.push('tc-defensa');
     if (mg?.colocando) c.push('tc-colocando');
     if (!modal && (g.vehicles?.nearest || p.driving)) c.push('tc-vehiculo');
-    if (g.autoFire.enabled) c.push('tc-auto');
     if (this.interruptores.correr) c.push('tc-correr');
     if (this.interruptores.apuntar) c.push('tc-apuntar');
 

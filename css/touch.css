@@ -147,10 +147,6 @@ body.modo-tactil:not(.in-menu) #touch-root { display: block; }
   background: rgba(255, 210, 63, 0.45);
   border-color: #ffd23f;
 }
-#touch-root.tc-auto [data-id="auto"] {
-  background: rgba(95, 209, 74, 0.5);
-  border-color: #9be38a;
-}
 
 /* =============================================================
    RACIMO DE LA DERECHA

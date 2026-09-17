@@ -132,6 +132,8 @@ export class Game {
     // DISPARO AUTOMATICO. Vale en ordenador y en movil: aprieta el raton
     // por ti cuando tienes a alguien en la mira (ver systems/autoFire.js).
     this.autoFire = new AutoFire(this);
+    // El truco del teclado (J-U-L-I). No hay boton en ninguna parte.
+    this.autoFire.escucharSecreto();
 
     // --- Sistemas de partida (se rellenan en startMatch) ---
     this.inventory = null;
@@ -1060,13 +1062,6 @@ export class Game {
     if (this.input.consume('map')) {
       this.showMap = !this.showMap;
     }
-    if (this.input.consume('autoFire')) {
-      const encendido = this.autoFire.toggle();
-      this.showMessage(
-        encendido ? 'Disparo automatico: SI' : 'Disparo automatico: NO',
-        encendido ? 'uncommon' : null
-      );
-    }
     if (this.input.consume('toggleHelp')) {
       document.getElementById('controls-help')?.classList.toggle('hidden');
     }
@@ -1563,6 +1558,13 @@ export class Game {
         drawMinigameEnd(ctx, this.minigame, view, this.time,
           { x: this.mouse.screenX, y: this.mouse.screenY });
         return;
+      }
+
+      // La unica senal de que el disparo automatico esta puesto: un punto
+      // minusculo en la esquina. Quien no sepa el truco no lo mira.
+      if (this.autoFire.enabled) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+        ctx.fillRect(4, view.height - 8, 4, 4);
       }
 
       drawInventory(ctx, this.inventory, view, this.time, this.player);
