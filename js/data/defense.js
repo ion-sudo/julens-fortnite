@@ -15,11 +15,12 @@
 
 export const DEFENSA = {
   /**
-   * Oleadas que hay que aguantar para ganar. Eran 10; ahora son 2 para
-   * partidas cortas. Se puede subir cuando se quiera: la ultima oleada
-   * siempre trae de todo y un jefe (ver composicionOleada).
+   * Oleadas que hay que aguantar para ganar. Es UN solo numero: la
+   * dificultad, los tipos de zombi y los jefes se reparten solos a lo
+   * largo de las que sean, y la ultima siempre trae de todo y un jefe
+   * (ver composicionOleada).
    */
-  oleadas: 2,
+  oleadas: 30,
   /** Cada cuantas oleadas sale un JEFE (en la 5 y en la 10). */
   jefeCada: 5,
   /** Dinero con el que se empieza, para las primeras defensas. */
@@ -44,6 +45,16 @@ export const DEFENSA = {
 
 /** Pavos de la cuenta que se ganan por cada oleada aguantada. */
 export const PAVOS_POR_OLEADA = 15;
+
+/**
+ * TOPE de vida de un jefe, en veces la suya normal.
+ *
+ * Un jefe se multiplicaba DOS veces: por lo dura que es la oleada y por
+ * ser jefe. Con pocas oleadas daba igual, pero con 30 el ultimo salia
+ * con casi 59.000 de vida: imposible de tirar por mucha torre que
+ * tuvieras. Con el tope se queda en algo duro pero matable.
+ */
+export const TOPE_VIDA_JEFE = 12;
 
 /* =============================================================
    ZOMBIS
@@ -166,8 +177,9 @@ export function composicionOleada(n) {
     /** Segundos entre zombi y zombi (cada vez salen mas seguidos). */
     ritmo: Math.max(0.45, 1.5 - n * 0.09),
     /** El segundo jefe aguanta bastante mas que el primero. */
-    // (nunca por debajo de la vida normal: un jefe temprano no es un jefe flojo)
-    vidaJefe: Math.max(1, 1 + (n / DEFENSA.jefeCada - 1) * 0.7),
+    // Cuanto mas duro es cada jefe que el anterior (se multiplica por la
+    // dureza de la oleada, y el total lo limita TOPE_VIDA_JEFE).
+    vidaJefe: Math.max(1, 1 + (n / DEFENSA.jefeCada - 1) * 0.25),
   };
 }
 

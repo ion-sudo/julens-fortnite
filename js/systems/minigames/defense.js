@@ -35,7 +35,7 @@ import { DefenseStructures } from '../defense/structures.js';
 import { drawBase, drawGhost, drawPortal } from '../../entities/defenseSprites.js';
 import { drawDefenseHud, botonesTienda } from '../../ui/defenseHud.js';
 import { hits } from '../../ui/minigameHud.js';
-import { DEFENSA, ZOMBIES, composicionOleada } from '../../data/defense.js';
+import { DEFENSA, ZOMBIES, composicionOleada, TOPE_VIDA_JEFE } from '../../data/defense.js';
 import { makeWeapon, setWeaponPool } from '../../data/loot.js';
 import { findWeapon } from '../../data/weapons.js';
 import { AMMO_TYPES } from '../../data/ammo.js';
@@ -474,7 +474,11 @@ export class JulenDefense extends Minigame {
   _sacarZombi(tipo) {
     const def = ZOMBIES[tipo];
     const mult = {
-      vida: this.comp.vida * (def.jefe ? this.comp.vidaJefe : 1),
+      // Al jefe se le juntan las dos cuentas (oleada dura + jefe), asi que
+      // se le pone tope: si no, el de la oleada 30 seria inmatable.
+      vida: def.jefe
+        ? Math.min(TOPE_VIDA_JEFE, this.comp.vida * this.comp.vidaJefe)
+        : this.comp.vida,
       dano: this.comp.dano,
     };
     const x = this.carril.x1 - 40 - Math.random() * 30;
