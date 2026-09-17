@@ -338,6 +338,13 @@ export class JulenDefense extends Minigame {
   }
 
   _mejorarCercana() {
+    // Pegado a la torre, la misma tecla la REPARA pagando.
+    const px = this.player.x + this.player.w / 2;
+    if (Math.abs(px - this.base.x) < 130) {
+      this._repararTorre();
+      return;
+    }
+
     const s = this.estructuras.cercana(this.player.x + this.player.w / 2, 90);
     if (!s) {
       this.game.showMessage('Acercate a una torre o trampa para mejorarla');
@@ -359,6 +366,24 @@ export class JulenDefense extends Minigame {
       accion.tipo === 'mejorar' ? `${s.def.name} · nivel ${s.nivel}` : `${s.def.name} recargada`,
       'epic'
     );
+  }
+
+  /** Devuelve vida a la torre a cambio de dinero. */
+  _repararTorre() {
+    const r = DEFENSA.reparacion;
+    if (this.base.vida >= this.base.vidaMax) {
+      this.game.showMessage('La torre esta entera');
+      return;
+    }
+    if (this.dinero < r.precio) {
+      this.game.showMessage(`Te faltan $${r.precio - this.dinero}`);
+      return;
+    }
+    this.dinero -= r.precio;
+    this.base.vida = Math.min(this.base.vidaMax, this.base.vida + r.cantidad);
+    this.particles.spark(this.base.x, this.base.y - 120, '#5fd14a', 20, 220);
+    playReward();
+    this.game.showMessage(`Torre reparada · +${r.cantidad} de vida`, 'epic');
   }
 
   _rellenarMunicion() {

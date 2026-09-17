@@ -32,8 +32,14 @@ export class Mouse {
     this.worldX = 0;
     this.worldY = 0;
 
-    this.left = false;
-    this.right = false;
+    // El boton puede estar apretado por el RATON de verdad o por algo
+    // virtual (la pantalla tactil, el disparo automatico). Se llevan
+    // aparte para que soltar uno no suelte el otro: con el automatico
+    // puesto, tu clic manual tiene que seguir valiendo, y al reves.
+    this._realLeft = false;
+    this._realRight = false;
+    this._virtualLeft = false;
+    this._virtualRight = false;
     this.leftPressed = false;
     this.rightPressed = false;
     /** true mientras el cursor este dentro del lienzo. */
@@ -46,6 +52,10 @@ export class Mouse {
     this._onLeave = this._onLeave.bind(this);
     this._onBlur = this._onBlur.bind(this);
   }
+
+  /** ¿Esta apretado el boton? Da igual si es el raton o algo virtual. */
+  get left() { return this._realLeft || this._virtualLeft; }
+  get right() { return this._realRight || this._virtualRight; }
 
   attach() {
     this.canvas.addEventListener('mousemove', this._onMove);
@@ -81,13 +91,13 @@ export class Mouse {
 
   _onDown(e) {
     this._updateFromEvent(e);
-    if (e.button === 0) { this.left = true; this.leftPressed = true; }
-    if (e.button === 2) { this.right = true; this.rightPressed = true; e.preventDefault(); }
+    if (e.button === 0) { this._realLeft = true; this.leftPressed = true; }
+    if (e.button === 2) { this._realRight = true; this.rightPressed = true; e.preventDefault(); }
   }
 
   _onUp(e) {
-    if (e.button === 0) this.left = false;
-    if (e.button === 2) this.right = false;
+    if (e.button === 0) this._realLeft = false;
+    if (e.button === 2) this._realRight = false;
   }
 
   /** Sin esto, el clic derecho abriria el menu contextual del navegador. */
@@ -96,8 +106,10 @@ export class Mouse {
   _onLeave() { this.inside = false; }
 
   _onBlur() {
-    this.left = false;
-    this.right = false;
+    this._realLeft = false;
+    this._realRight = false;
+    this._virtualLeft = false;
+    this._virtualRight = false;
     this.leftPressed = false;
     this.rightPressed = false;
   }
@@ -121,16 +133,16 @@ export class Mouse {
   pressVirtual(boton = 'left') {
     if (boton === 'right') {
       if (!this.right) this.rightPressed = true;
-      this.right = true;
+      this._virtualRight = true;
     } else {
       if (!this.left) this.leftPressed = true;
-      this.left = true;
+      this._virtualLeft = true;
     }
   }
 
   releaseVirtual(boton = 'left') {
-    if (boton === 'right') this.right = false;
-    else this.left = false;
+    if (boton === 'right') this._virtualRight = false;
+    else this._virtualLeft = false;
   }
 
   /** Un clic: pulsado este frame, sin quedarse apretado. */

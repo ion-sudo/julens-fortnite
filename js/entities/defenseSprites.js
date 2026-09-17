@@ -122,6 +122,21 @@ export function drawZombie(ctx, z, time, alpha) {
   ctx.moveTo(4, -36); ctx.lineTo(22 + brazo, -33);
   ctx.stroke();
 
+  // Chapa por delante, mientras le aguante
+  if (z.escudo > 0) {
+    ctx.fillStyle = blanco ? '#ffffff' : '#8a9099';
+    roundRectPath(ctx, 14, -50, 9, 40, 3);
+    ctx.fill();
+    ctx.fillStyle = '#5d636d';
+    ctx.fillRect(16, -46, 5, 32);
+    ctx.fillStyle = '#c8d0dc';
+    for (const yy of [-44, -32, -20]) {
+      ctx.beginPath();
+      ctx.arc(18.5, yy, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   // Cabeza
   ctx.fillStyle = piel;
   ctx.beginPath();
@@ -184,6 +199,17 @@ export function drawZombie(ctx, z, time, alpha) {
     ctx.fillRect(bx, by, bw, 5);
     ctx.fillStyle = d.jefe ? '#e8434f' : '#7ee06a';
     ctx.fillRect(bx, by, bw * (z.health / z.maxHealth), 5);
+  }
+
+  // Lo que le queda de chapa, encima de la vida
+  if (!z.dead && z.escudoMax > 0 && z.escudo > 0) {
+    const bw = Math.max(34, z.w + 6);
+    const bx = cx - bw / 2;
+    const by = z.y - (d.jefe ? 23 : 17);
+    ctx.fillStyle = 'rgba(10, 16, 34, 0.85)';
+    ctx.fillRect(bx, by, bw, 4);
+    ctx.fillStyle = '#9fd4ff';
+    ctx.fillRect(bx, by, bw * (z.escudo / z.escudoMax), 4);
   }
 }
 
@@ -333,6 +359,22 @@ export function drawTower(ctx, s, time) {
     ctx.fillRect(4, -3, 46, 6);
     ctx.fillStyle = def.acento;
     ctx.fillRect(10, -9, 12, 5);
+  } else if (def.id === 'laser') {
+    ctx.fillRect(6, -3, 30, 6);
+    ctx.fillStyle = def.acento;
+    ctx.fillRect(10, -1.5, 28, 3);
+    ctx.beginPath();
+    ctx.arc(38, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (def.id === 'aturdidora') {
+    ctx.fillRect(6, -6, 14, 12);
+    ctx.strokeStyle = def.acento;
+    ctx.lineWidth = 2.5;
+    for (const r of [8, 13]) {
+      ctx.beginPath();
+      ctx.arc(22, 0, r, -Math.PI / 2.4, Math.PI / 2.4);
+      ctx.stroke();
+    }
   } else if (def.id === 'reparadora') {
     // Una cruz en vez de canon: esta no dispara.
     ctx.fillStyle = '#ffffff';
@@ -482,6 +524,36 @@ export function drawTrap(ctx, s, time) {
       ctx.moveTo(x, y - 38 + baja); ctx.lineTo(x + 8, y - 28 + baja); ctx.lineTo(x - 8, y - 28 + baja);
       ctx.closePath();
       ctx.fill();
+      break;
+    }
+
+    case 'sierra': {
+      // Disco dentado girando en una ranura del suelo
+      ctx.fillStyle = '#2b2f3a';
+      ctx.fillRect(x - w / 2, y - 6, w, 6);
+      const giro = time * (s.flash > 0 ? 26 : 9);
+      ctx.save();
+      ctx.translate(x, y - 10);
+      ctx.rotate(giro);
+      ctx.fillStyle = d.acento;
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = d.color;
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 13, Math.sin(a) * 13);
+        ctx.lineTo(Math.cos(a + 0.28) * 17, Math.sin(a + 0.28) * 17);
+        ctx.lineTo(Math.cos(a + 0.56) * 13, Math.sin(a + 0.56) * 13);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.fillStyle = '#2b2f3a';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
       break;
     }
 

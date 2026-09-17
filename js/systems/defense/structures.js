@@ -30,6 +30,7 @@ const RAREZA_NIVEL = [null, 'rare', 'epic', 'legendary'];
 const SONIDO_TORRE = {
   ametralladora: 'smg', canon: 'sniper', hielo: 'hielo', mortero: 'cohetes',
   tesla: 'cadena', lanzallamas: 'llamas', francotiradora: 'sniper',
+  laser: 'beam', aturdidora: 'pulso',
 };
 /** Ancho que ocupa una torre en el suelo. */
 const ANCHO_TORRE = 46;
@@ -193,7 +194,7 @@ export class DefenseStructures {
       range: d.alcanceBala ?? d.alcance + 160,
       pierce: !!d.perfora,
       rarity: RAREZA_NIVEL[s.nivel],
-      kind: d.efecto === 'hielo' || d.efecto === 'cadena' ? 'rayo' : 'bala',
+      kind: d.efecto === 'hielo' || d.efecto === 'cadena' || d.efecto === 'aturde' || d.id === 'laser' ? 'rayo' : 'bala',
       // Las balas son del jugador: asi nunca le dan a el.
       owner: this.mode.player,
       effect: d.efecto || null,
@@ -300,6 +301,13 @@ export class DefenseStructures {
         // Golpe seco hacia atras, a ras de suelo: de vuelta al portal.
         z.lanzar(d.fuerza, d.empuje, dano, jugador);
         this.mode.particles.puff(s.x, s.y - 10, 'rgba(255, 200, 120, 0.6)', 6);
+      } else {
+        // La sierra, y cualquier trampa nueva que solo haga dano. Antes
+        // esto no existia: la sierra gastaba usos y no quitaba vida,
+        // porque no tenia su rama. Con este respaldo, una trampa nueva
+        // hace su dano aunque se olvide anadirle nada especial.
+        z.takeDamage(dano, z.cx, pie, jugador);
+        this.mode.particles.spark(z.cx, pie - 8, d.acento, 10, 240);
       }
 
       if (s.usos <= 0) break;

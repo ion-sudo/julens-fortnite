@@ -253,6 +253,10 @@ export const CONFIG = {
 
     map:    ['KeyM'],
 
+    // Disparo automatico: la O estaba libre. Tambien hay un boton en la
+    // esquina (ui/autoButton.js) y otro en los controles tactiles.
+    autoFire: ['KeyO'],
+
     // Emotes: B abre y cierra la rueda (la usa el Fortnite de verdad, y
     // aqui estaba libre). Con la rueda abierta, 1..6 eligen directo.
     emoteWheel: ['KeyB'],

@@ -34,8 +34,6 @@
  */
 
 import { inventorySlotRects } from './inventoryHud.js';
-import { hasLineOfSight } from '../systems/botAI.js';
-import { areAllies } from '../systems/teams.js';
 import { SLOT_COUNT, PICKAXE_SLOT } from '../core/inventory.js';
 
 /** Donde se guardan los ajustes tactiles (aparte del perfil). */
@@ -48,8 +46,6 @@ const ZONA_JOYSTICK = 0.42;
 /** Distancia minima y maxima de la mira al personaje (pixeles del lienzo). */
 const MIRA_MIN = 70;
 const MIRA_MAX = 560;
-/** Cono en el que el disparo automatico busca enemigos (radianes). */
-const CONO_AUTO = 0.35;
 /** Lo rapido que la ayuda gira la mira hacia el enemigo (rad/s). */
 const GIRO_AYUDA = 2.4;
 
@@ -160,6 +156,14 @@ export class TouchControls {
 
     // El juego llama a esto cada frame, ANTES de leer teclado y raton.
     game.onFrame = (dt) => this.frame(dt);
+
+    // El disparo automatico es comun a ordenador y movil (systems/autoFire.js).
+    // Aqui solo se le presta la mano que aprieta (que sabe de varios dedos
+    // a la vez) y la ayuda para apuntar, que solo tiene sentido con dedo.
+    game.autoFire.onHold = (apretado) => this._fuenteRaton('left', 'auto', apretado);
+    game.autoFire.asistir = (objetivo, dt) => {
+      if (this.dispositivo.tactil && this.apuntando === null) this._acercarMira(objetivo, dt);
+    };
   }
 
   /* =============================================================
@@ -431,9 +435,8 @@ export class TouchControls {
     } else if (id === 'granada') {
       this._siguienteGranada();
     } else if (id === 'auto') {
-      this.ajustes.auto = !this.ajustes.auto;
-      this._guardarAjustes();
-      game.showMessage(this.ajustes.auto ? 'Disparo automatico: SI' : 'Disparo automatico: NO', 'rare');
+      const encendido = game.autoFire.toggle();
+      game.showMessage(encendido ? 'Disparo automatico: SI' : 'Disparo automatico: NO', 'rare');
     } else if (id === 'completa') {
       this._pantallaCompleta();
     } else if (id === 'cancelar') {
@@ -645,83 +648,12 @@ export class TouchControls {
   }
 
   /* =============================================================
-     DISPARO AUTOMATICO
+     AYUDA PARA APUNTAR
+     -------------------------------------------------------------
+     El disparo automatico esta en systems/autoFire.js, que sirve
+     igual para ordenador. Lo unico que es de aqui es acercar la
+     mira, que solo tiene sentido apuntando con el dedo.
      ============================================================= */
-
-  _disparoAutomatico(dt, modal) {
-    const g = this.game;
-    const p = g.player;
-    const arma = g.inventory?.equipped;
-
-    const puede = this.ajustes.auto && !modal && p.alive && !p.downed && !p.flight &&
-      !p.driving && !p.buildMode && !g.minigame?.blocksActions &&
-      arma?.kind === 'weapon' && !arma.def.effect;
-
-    const objetivo = puede ? this._buscarObjetivo(arma) : null;
-    if (!objetivo) {
-      this._fuenteRaton('left', 'auto', false);
-      return;
-    }
-
-    // Ayuda a apuntar: solo si no estas moviendo la mira tu mismo.
-    if (this.apuntando === null) this._acercarMira(objetivo, dt);
-
-    if (!objetivo.enMira) {
-      this._fuenteRaton('left', 'auto', false);
-    } else if (arma.def.auto) {
-      this._fuenteRaton('left', 'auto', true);
-    } else {
-      // Las semiautomaticas disparan al PULSAR: un clic cada vez que se
-      // puede volver a disparar.
-      this._fuenteRaton('left', 'auto', false);
-      if (g.combat.cooldown <= 0) g.mouse.clickVirtual('left');
-    }
-  }
-
-  /**
-   * El enemigo mas prometedor cerca de la mira: dentro del cono, a tiro y
-   * con linea de vision (la misma comprobacion que usan los bots).
-   * @returns {{ang:number, dist:number, enMira:boolean}|null}
-   */
-  _buscarObjetivo(arma) {
-    const g = this.game;
-    const p = g.player;
-    const hx = p.handX;
-    const hy = p.handY;
-    const alcance = arma.def.range * 0.95;
-    let mejor = null;
-
-    const mirar = (t) => {
-      const r = t.rect ? t.rect() : t;
-      const cx = r.x + r.w / 2;
-      const cy = r.y + r.h / 2;
-      const dist = Math.hypot(cx - hx, cy - hy);
-      if (dist > alcance || dist < 1) return;
-
-      const ang = Math.atan2(cy - hy, cx - hx);
-      const diff = Math.abs(normalizar(ang - p.aimAngle));
-      if (diff > CONO_AUTO) return;
-      if (!hasLineOfSight(p, r, g.world)) return;
-
-      // "En la mira": el angulo que ocupa su cuerpo visto desde el arma.
-      const tolerancia = Math.atan2(Math.max(r.h * 0.5, 20), dist) + 0.02;
-      const cand = { ang, dist, enMira: diff <= tolerancia };
-      if (!mejor || (cand.enMira && !mejor.enMira) || (cand.enMira === mejor.enMira && dist < mejor.dist)) {
-        mejor = cand;
-      }
-    };
-
-    for (const e of g.match?.entities || []) {
-      if (e === p || areAllies(p, e)) continue;
-      mirar(e);
-    }
-    // Dianas, maniquies y zombis de JULEN DEFENSA.
-    for (const t of g.targets || []) {
-      if (t.dead || t.alive === false) continue;
-      mirar(t);
-    }
-    return mejor;
-  }
 
   /** Gira la mira un poco hacia el objetivo, sin cambiar su distancia. */
   _acercarMira(objetivo, dt) {
@@ -765,7 +697,6 @@ export class TouchControls {
     const hayClic = [...this.punteros.values()].some((p) => p.tipo === 'clic');
     if (!modal && !hayClic) this._actualizarMira(dt);
 
-    this._disparoAutomatico(dt, modal);
     this._pintarEstado(modal);
   }
 
@@ -798,7 +729,7 @@ export class TouchControls {
     if (mg?.id === 'defensa' && mg.state !== 'fin') c.push('tc-defensa');
     if (mg?.colocando) c.push('tc-colocando');
     if (!modal && (g.vehicles?.nearest || p.driving)) c.push('tc-vehiculo');
-    if (this.ajustes.auto) c.push('tc-auto');
+    if (g.autoFire.enabled) c.push('tc-auto');
     if (this.interruptores.correr) c.push('tc-correr');
     if (this.interruptores.apuntar) c.push('tc-apuntar');
 

@@ -73,6 +73,7 @@ import { drawCrosshair } from '../ui/crosshair.js';
 import { drawMatchHud, drawEndScreen, drawDeploymentHud } from '../ui/matchHud.js';
 import { drawWorldMap } from '../ui/worldMap.js';
 import { ReloadManager } from '../systems/reload.js';
+import { AutoFire } from '../systems/autoFire.js';
 import { drawRespawnHud } from '../ui/reloadHud.js';
 import { Ambience } from '../world/ambience.js';
 import { control, segunControl } from '../ui/controlHints.js';
@@ -83,6 +84,17 @@ import { control, segunControl } from '../ui/controlHints.js';
  * obedece a nadie. Es mas seguro que apagar el update entero, porque
  * asi la gravedad y las colisiones siguen igual que siempre.
  */
+/**
+ * Respiro antes de que las pantallas de FIN hagan caso a un clic.
+ *
+ * Al acabar una partida (o la ultima oleada de JULEN DEFENSA) lo normal
+ * es estar disparando, y los botones salen en mitad de la pantalla: el
+ * tiro que estabas dando caia encima de SALIR y te mandaba al menu sin
+ * darte tiempo a leer nada. Ademas, el clic que YA venias apretando no
+ * cuenta: hay que soltar y volver a pulsar.
+ */
+const ESPERA_FIN = 1.2;
+
 const INPUT_QUIETO = {
   axisX: 0,
   isDown: () => false,
@@ -116,6 +128,10 @@ export class Game {
     this.camera = new Camera(this.view.width, this.view.height, this.world);
     this.camera.snapTo(this.player);
     this.mouse = new Mouse(canvas, this.camera);
+
+    // DISPARO AUTOMATICO. Vale en ordenador y en movil: aprieta el raton
+    // por ti cuando tienes a alguien en la mira (ver systems/autoFire.js).
+    this.autoFire = new AutoFire(this);
 
     // --- Sistemas de partida (se rellenan en startMatch) ---
     this.inventory = null;
@@ -663,6 +679,10 @@ export class Game {
     // El pico golpea a bots y dianas: se recalcula cada frame en update().
     this.combat.targets = this.targets;
 
+    // El respiro de la pantalla de fin empieza de cero en cada partida.
+    this._finDesde = null;
+    this._finConClic = false;
+
     // OJO: aqui NO se borra `this.message`. Antes si, y como esto va lo
     // ultimo del arranque, se comia los avisos que la propia partida
     // acababa de poner: el de la hora y el clima ("Noche cerrada") y el
@@ -796,6 +816,16 @@ export class Game {
     // Durante la partida el cursor esta oculto (la mira hace de puntero);
     // aqui hace falta verlo para poder pulsar los botones.
     this.canvas.style.cursor = 'default';
+
+    // El respiro: se apunta cuando aparecio la pantalla y si se llego
+    // con el boton ya apretado (ver ESPERA_FIN).
+    const mg = this.minigame;
+    if (mg._finDesde == null) {
+      mg._finDesde = this.time;
+      mg._finConClic = this.mouse.left;
+    }
+    if (mg._finConClic && !this.mouse.left) mg._finConClic = false;
+    if (mg._finConClic || this.time - mg._finDesde < ESPERA_FIN) return;
 
     const view = { width: this.canvas.width, height: this.canvas.height };
     const botones = endButtons(view);
@@ -1030,6 +1060,13 @@ export class Game {
     if (this.input.consume('map')) {
       this.showMap = !this.showMap;
     }
+    if (this.input.consume('autoFire')) {
+      const encendido = this.autoFire.toggle();
+      this.showMessage(
+        encendido ? 'Disparo automatico: SI' : 'Disparo automatico: NO',
+        encendido ? 'uncommon' : null
+      );
+    }
     if (this.input.consume('toggleHelp')) {
       document.getElementById('controls-help')?.classList.toggle('hidden');
     }
@@ -1059,7 +1096,15 @@ export class Game {
     // Con el jugador eliminado (o ganada la partida) solo queda mirar:
     // se congela la accion y se espera a que vuelva al menu.
     if (this.match.result !== 'jugando') {
-      if (this.mouse.leftPressed) this.onExitToMenu?.();
+      // Mismo respiro que en los modos: el tiro con el que ganaste no
+      // vale como "volver al menu".
+      if (this._finDesde == null) {
+        this._finDesde = this.time;
+        this._finConClic = this.mouse.left;
+      }
+      if (this._finConClic && !this.mouse.left) this._finConClic = false;
+      const listo = !this._finConClic && this.time - this._finDesde >= ESPERA_FIN;
+      if (listo && this.mouse.leftPressed) this.onExitToMenu?.();
       this.input.update();
       this.mouse.update();
       return;
@@ -1085,6 +1130,9 @@ export class Game {
     // EMOTES. Van los primeros porque mandan sobre todo lo demas: con la
     // rueda abierta o bailando no se dispara, no se construye y no se
     // anda, y asi no hay que comprobarlo en cada sistema por separado.
+    // Disparo automatico: aprieta el raton ANTES de que lo lea el combate.
+    if (!volando && !bloqueado) this.autoFire.update(dt);
+
     if (!volando && !bloqueado) this.emotes.update(dt, this.input, this.mouse);
     const bailando = this.emotes.wheelOpen || this.emotes.active;
 

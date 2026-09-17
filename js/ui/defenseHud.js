@@ -220,6 +220,17 @@ function ayudaColocar(ctx, m, view) {
 }
 
 function ayudaMejora(ctx, m, view) {
+  // Pegado a la torre: la misma tecla la repara pagando.
+  const px = m.player.x + m.player.w / 2;
+  if (Math.abs(px - m.base.x) < 130) {
+    const entera = m.base.vida >= m.base.vidaMax;
+    const lineas = entera
+      ? ['La torre esta entera']
+      : [`${control('upgrade')} · Reparar la torre +${DEFENSA.reparacion.cantidad} ($${DEFENSA.reparacion.precio})`];
+    cajaAyuda(ctx, view, lineas, 'rgba(95, 209, 74, 0.75)');
+    return;
+  }
+
   const s = m.estructuras.cercana(m.player.x + m.player.w / 2, 90);
   if (!s) return;
 

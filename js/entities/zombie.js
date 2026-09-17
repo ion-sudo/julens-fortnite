@@ -22,6 +22,7 @@
  * Y dos tipos con reglas propias (ver data/defense.js):
  *   vuela      va por el aire: ni trampas de suelo ni paredes le paran
  *   explota    no golpea: revienta contra lo que tiene delante
+ *   escudo     chapa por delante: para casi todo lo que le llega de frente
  */
 
 import { drawZombie } from './defenseSprites.js';
@@ -55,6 +56,9 @@ export class Zombie {
 
     this.maxHealth = Math.round(def.vida * (mult.vida || 1));
     this.health = this.maxHealth;
+    /** Chapa frontal: aguanta por su cuenta hasta que se rompe. */
+    this.escudoMax = Math.round((def.escudo || 0) * (mult.vida || 1));
+    this.escudo = this.escudoMax;
     this.dano = def.dano * (mult.dano || 1);
 
     this.dead = false;
@@ -118,11 +122,24 @@ export class Zombie {
     if (bala?.effect === 'hielo') this.ralentizar(0.45, 2.2);
     else if (bala?.effect === 'fuego') this.quemar(12, 2.5, source);
     else if (bala?.effect === 'cadena') this.mode.cadena(this, amount * 0.6, source);
+    else if (bala?.effect === 'aturde') this.congelar(0.6);
   }
 
   /** Dano a pelo, sin efectos. `silencioso` = sin numerito flotando. */
   recibir(amount, hx, hy, source, silencioso = false) {
     if (this.dead || amount <= 0) return;
+
+    // ESCUDO: lo lleva por delante, y camina hacia la izquierda, asi que
+    // solo le protege de lo que le llega desde ese lado (tus disparos).
+    // Lo que le pilla desde abajo o desde atras (trampas, explosiones) le
+    // entra entero.
+    if (this.escudo > 0 && hx != null && hx < this.cx - this.w * 0.1) {
+      const parado = Math.min(this.escudo, amount * 0.75);
+      this.escudo -= parado;
+      amount -= parado;
+      this.mode.particles.spark(this.x, this.y + this.h * 0.4, '#c8d0dc', 3, 130);
+      if (amount < 1) return;
+    }
 
     this.health -= amount;
     this.hitFlash = 0.12;

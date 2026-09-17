@@ -32,6 +32,12 @@ export const DEFENSA = {
   vidaBase: 1500,
   /** Segundos que tarda el jugador en volver a la torre si lo tumban. */
   respawnJugador: 4,
+  /**
+   * REPARAR LA TORRE con dinero: acercandose a ella y pulsando la tecla
+   * de mejorar. Es la otra forma de gastar: o mas defensas, o aguantar
+   * con la que tienes.
+   */
+  reparacion: { precio: 120, cantidad: 300 },
   /** Dinero extra por aguantar una oleada: cuanto mas avanzada, mas. */
   bonusOleada: (n) => 100 + n * 25,
 };
@@ -86,6 +92,19 @@ export const ZOMBIES = {
   },
 
   /*
+   * ESCUDO: lleva una chapa por delante. Como camina hacia la torre, lo
+   * que le llega DE FRENTE (tus disparos desde la torre) casi no le hace
+   * nada; las trampas del suelo y las explosiones si. Obliga a no fiarlo
+   * todo a disparar de lejos.
+   */
+  escudo: {
+    id: 'escudo', name: 'Zombi con Escudo', escudo: 260,
+    vida: 140, velocidad: 42, dano: 26, ritmo: 1.2,
+    w: 40, h: 68, dinero: 26,
+    color: '#5d7a45', ropa: '#2f3b55',
+  },
+
+  /*
    * BOMBA: no golpea, REVIENTA contra lo primero que encuentra (la torre,
    * una pared o tu). Si lo matas antes, explota igual... encima de los
    * zombis que tenga al lado.
@@ -124,13 +143,15 @@ export function composicionOleada(n) {
   // suelo no les tocan) y bombas desde la 5 (castigan dejar la torre sola).
   const voladores = (n >= 3 || ultima) ? Math.max(1, Math.round(total * Math.min(0.2, 0.04 + n * 0.015))) : 0;
   const bombas = (n >= 5 || ultima) ? Math.max(1, 1 + Math.floor((n - 5) * 0.6)) : 0;
-  const normales = Math.max(3, total - rapidos - tanques - voladores - bombas);
+  const escudos = (n >= 4 || ultima) ? Math.max(1, Math.floor((n - 3) * 0.7)) : 0;
+  const normales = Math.max(3, total - rapidos - tanques - voladores - bombas - escudos);
 
   const lista = [{ tipo: 'normal', cuantos: normales }];
   if (rapidos) lista.push({ tipo: 'rapido', cuantos: rapidos });
   if (tanques) lista.push({ tipo: 'tanque', cuantos: tanques });
   if (voladores) lista.push({ tipo: 'volador', cuantos: voladores });
   if (bombas) lista.push({ tipo: 'bomba', cuantos: bombas });
+  if (escudos) lista.push({ tipo: 'escudo', cuantos: escudos });
 
   const jefe = n % DEFENSA.jefeCada === 0 || ultima;
   if (jefe) lista.push({ tipo: 'jefe', cuantos: 1 });
@@ -155,7 +176,8 @@ export function composicionOleada(n) {
    -------------------------------------------------------------
    precio, alcance (px), dano, cadencia (disparos/s), velocidadBala,
    efecto del proyectil ('hielo' ralentiza, 'explosion' hace dano en
-   area con `radio`, 'cadena' salta a otros, 'fuego' quema), perfora
+   area con `radio`, 'cadena' salta a otros, 'fuego' quema, 'aturde'
+   los deja clavados un momento), perfora
    (atraviesa zombis). Y opcionales:
      dispersion   lo que se abre cada disparo (por defecto, casi nada)
      alcanceBala  hasta donde llega la bala (por defecto, alcance + 160)
@@ -212,6 +234,20 @@ export const TORRES = [
     precio: 350, alcance: 1400, dano: 150, cadencia: 0.35, velocidadBala: 2600,
     perfora: true, objetivo: 'mas-vida',
     color: '#3f4a3a', acento: '#b45cf0',
+  },
+  {
+    id: 'laser', name: 'Torre Laser',
+    desc: 'Rayo continuo que atraviesa a varios.',
+    precio: 300, alcance: 700, dano: 18, cadencia: 4, velocidadBala: 2600,
+    perfora: true,
+    color: '#3a5a5c', acento: '#7ff0ff',
+  },
+  {
+    id: 'aturdidora', name: 'Torre Aturdidora',
+    desc: 'Poco dano: los deja clavados un instante.',
+    precio: 260, alcance: 420, dano: 10, cadencia: 1.0, velocidadBala: 1500,
+    efecto: 'aturde',
+    color: '#4a3a6a', acento: '#c9a6ff',
   },
   {
     id: 'reparadora', name: 'Torre de Reparacion',
@@ -277,6 +313,12 @@ export const TRAMPAS = [
     desc: 'Explota en area al pisarla. Pocos usos.',
     precio: 150, usos: 3, dano: 110, espera: 1.5, w: 44, radio: 130,
     color: '#4a4f3a', acento: '#ff3b3b',
+  },
+  {
+    id: 'sierra', name: 'Sierra Circular',
+    desc: 'Muerde fuerte y muy seguido.',
+    precio: 140, usos: 25, dano: 45, espera: 0.45, w: 60,
+    color: '#4a4f5c', acento: '#d8dde6',
   },
   {
     // empuje: hacia atras; fuerza: hacia arriba (poca: va a ras de suelo)
