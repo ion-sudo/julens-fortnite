@@ -253,6 +253,10 @@ export const CONFIG = {
 
     map:    ['KeyM'],
 
+    // Disparo automatico. La tecla solo hace algo cuando ya se ha
+    // desbloqueado con el truco (ver systems/autoFire.js).
+    autoFire: ['KeyO'],
+
     // Emotes: B abre y cierra la rueda (la usa el Fortnite de verdad, y
     // aqui estaba libre). Con la rueda abierta, 1..6 eligen directo.
     emoteWheel: ['KeyB'],

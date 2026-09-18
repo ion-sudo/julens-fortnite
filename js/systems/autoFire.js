@@ -4,16 +4,22 @@
  * DISPARO AUTOMATICO: si tienes un enemigo en la mira y a tiro, el juego
  * aprieta el gatillo por ti.
  *
- * ES UN TRUCO SECRETO. No tiene boton ni sale en la ayuda: es demasiado
- * bueno como para dejarlo a la vista. Se enciende y se apaga asi:
+ * ES UN TRUCO SECRETO, en dos pasos: primero hay que DESBLOQUEARLO y
+ * luego ya se enciende y se apaga cuando quieras.
  *
- *   ORDENADOR     tecleando J - U - L - I seguidas (cuatro teclas que no
- *                 hacen nada en el juego, para no darle a esto sin querer)
- *   MOVIL / IPAD  dejando el dedo 2 segundos quieto en la esquina de
- *                 arriba a la izquierda (ver ui/touchControls.js)
+ * 1) DESBLOQUEAR (una vez, y se recuerda):
+ *      ORDENADOR     tecleando J - U - L - I seguidas (cuatro teclas que
+ *                    no hacen nada en el juego, para no darle sin querer)
+ *      MOVIL / IPAD  dejando el dedo 2 segundos quieto en la esquina de
+ *                    arriba a la izquierda (ver ui/touchControls.js)
  *
- * Viene APAGADO, y lo unico que se ve cuando esta puesto es un punto
- * minusculo en la esquina de abajo a la izquierda.
+ * 2) USARLO: la tecla O lo enciende y lo apaga. En movil aparece el boton
+ *    AUTO en la barra, pero SOLO despues de desbloquearlo.
+ *
+ * Sin desbloquear, la O no hace nada y no hay ningun boton: quien no se
+ * sepa el truco no encuentra esto ni queriendo. Viene APAGADO, y lo unico
+ * que se ve mientras esta puesto es un punto minusculo en la esquina de
+ * abajo a la izquierda.
  *
  * Lo unico que hace es "apretar el raton": el disparo, la cadencia, la
  * municion y el retroceso siguen siendo los de siempre (systems/combat.js).
@@ -30,6 +36,8 @@ import { areAllies } from './teams.js';
 
 /** Donde se guarda si esta encendido. */
 const CLAVE = 'fortniteClash.auto.v1';
+/** Y donde se guarda si ya se ha descubierto el truco. */
+const CLAVE_DESBLOQUEO = 'fortniteClash.auto.desbloqueado.v1';
 /** Cono en el que busca enemigos alrededor de la mira (radianes). */
 const CONO = 0.35;
 
@@ -45,6 +53,14 @@ function cargar() {
   }
 }
 
+function cargarDesbloqueo() {
+  try {
+    return localStorage.getItem(CLAVE_DESBLOQUEO) === '1';
+  } catch {
+    return false;
+  }
+}
+
 /** Angulo llevado a -PI..PI. */
 function normalizar(a) {
   return Math.atan2(Math.sin(a), Math.cos(a));
@@ -55,6 +71,8 @@ export class AutoFire {
   constructor(game) {
     this.game = game;
     this.enabled = cargar();
+    /** ¿Ya se sabe el truco? Hasta entonces, la tecla O no hace nada. */
+    this.desbloqueado = cargarDesbloqueo();
 
     /**
      * Quien aprieta el raton. Los controles tactiles lo cambian por el
@@ -73,6 +91,26 @@ export class AutoFire {
   /* =============================================================
      ENCENDER Y APAGAR
      ============================================================= */
+
+  /**
+   * El truco: desbloquea (la primera vez) o enciende y apaga.
+   * @returns {'desbloqueado'|boolean}
+   */
+  secreto() {
+    if (!this.desbloqueado) {
+      this.desbloquear();
+      return 'desbloqueado';
+    }
+    return this.toggle();
+  }
+
+  /** A partir de aqui ya vale la tecla O (y el boton en movil). */
+  desbloquear() {
+    this.desbloqueado = true;
+    try { localStorage.setItem(CLAVE_DESBLOQUEO, '1'); } catch { /* sin guardado */ }
+    this.set(true);
+    this.onChange?.(this.enabled);
+  }
 
   toggle() {
     this.set(!this.enabled);
@@ -209,13 +247,20 @@ export class AutoFire {
       if (paso < SECRETO.length) return;
 
       paso = 0;
-      this.avisar(this.toggle());
+      this.avisar(this.secreto());
     }, true);
   }
 
-  /** Aviso discreto: nada de carteles grandes, que es un secreto. */
-  avisar(encendido) {
-    this.game.showMessage(encendido ? 'auto' : 'auto no');
+  /**
+   * Lo que se ensena al usar el truco o la tecla. Al desbloquear si se
+   * canta, que es el premio; el encender y apagar de cada dia, discreto.
+   */
+  avisar(resultado) {
+    if (resultado === 'desbloqueado') {
+      this.game.showMessage('AUTO DESBLOQUEADO', 'legendary');
+      return;
+    }
+    this.game.showMessage(resultado ? 'AUTO: SI' : 'AUTO: NO');
   }
 
   _apretar(valor) {

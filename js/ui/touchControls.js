@@ -91,6 +91,9 @@ const BOTONES = [
   { id: 'bailes', donde: 'barra', tipo: 'toque', accion: 'emoteWheel', icono: '♪', texto: 'BAILES' },
   { id: 'granada', donde: 'barra', tipo: 'especial', icono: '💣', texto: 'GRANADA' },
   { id: 'soltar', donde: 'barra', tipo: 'toque', accion: 'drop', icono: '⇩', texto: 'SOLTAR' },
+  // El AUTO solo aparece cuando ya se ha desbloqueado el truco secreto
+  // (ver systems/autoFire.js). Hasta entonces, ni existe.
+  { id: 'auto', donde: 'barra', solo: 'auto', tipo: 'especial', icono: '⚡', texto: 'AUTO' },
   { id: 'completa', donde: 'barra', tipo: 'especial', icono: '⛶', texto: 'PANTALLA' },
 
   // --- Solo cuando tocan ---
@@ -342,7 +345,7 @@ export class TouchControls {
       this._secretoDesde = { x: e.clientX, y: e.clientY };
       this._secretoReloj = setTimeout(() => {
         this._secretoReloj = null;
-        this.game.autoFire.avisar(this.game.autoFire.toggle());
+        this.game.autoFire.avisar(this.game.autoFire.secreto());
       }, ESPERA_SECRETA);
     }
 
@@ -464,6 +467,8 @@ export class TouchControls {
       this.confirmar.hidden = false;
     } else if (id === 'granada') {
       this._siguienteGranada();
+    } else if (id === 'auto') {
+      game.autoFire.avisar(game.autoFire.toggle());
     } else if (id === 'completa') {
       this._pantallaCompleta();
     } else if (id === 'cancelar') {
@@ -756,6 +761,8 @@ export class TouchControls {
     if (mg?.id === 'defensa' && mg.state !== 'fin') c.push('tc-defensa');
     if (mg?.colocando) c.push('tc-colocando');
     if (!modal && (g.vehicles?.nearest || p.driving)) c.push('tc-vehiculo');
+    if (g.autoFire.desbloqueado) c.push('tc-auto-listo');
+    if (g.autoFire.enabled) c.push('tc-auto');
     if (this.interruptores.correr) c.push('tc-correr');
     if (this.interruptores.apuntar) c.push('tc-apuntar');
 

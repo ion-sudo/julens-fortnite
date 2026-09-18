@@ -1062,6 +1062,10 @@ export class Game {
     if (this.input.consume('map')) {
       this.showMap = !this.showMap;
     }
+    // La O solo vale si ya se ha descubierto el truco; si no, ni se entera.
+    if (this.input.consume('autoFire') && this.autoFire.desbloqueado) {
+      this.autoFire.avisar(this.autoFire.toggle());
+    }
     if (this.input.consume('toggleHelp')) {
       document.getElementById('controls-help')?.classList.toggle('hidden');
     }

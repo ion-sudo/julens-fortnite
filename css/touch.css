@@ -251,10 +251,19 @@ body.modo-tactil:not(.in-menu) #touch-root { display: block; }
 
 #touch-root .solo-vehiculo,
 #touch-root .solo-defensa,
-#touch-root .solo-colocando { display: none; }
+#touch-root .solo-colocando,
+/* El AUTO no existe hasta que se descubre el truco. */
+#touch-root .solo-auto { display: none; }
 #touch-root.tc-vehiculo .solo-vehiculo,
 #touch-root.tc-defensa .solo-defensa,
+#touch-root.tc-auto-listo .solo-auto,
 #touch-root.tc-colocando .solo-colocando { display: flex; }
+
+/* AUTO encendido: verde, como los demas interruptores. */
+#touch-root.tc-auto [data-id="auto"] {
+  background: rgba(95, 209, 74, 0.5);
+  border-color: #9be38a;
+}
 
 /* Con una pantalla que se pulsa (tienda, bailes, final), fuera lo que
    estorba: se ve lo que hay que tocar. */
