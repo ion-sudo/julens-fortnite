@@ -8,10 +8,16 @@
  * granadas, sin tocar una linea del combate. Tambien tiene `x/y/w/h`
  * sueltos y `alive`, que es lo que miran las explosiones.
  *
- * Camina en linea recta hacia la IZQUIERDA, que es donde esta la torre,
- * y se para a golpear lo primero que se encuentre: al jugador, una
- * pared que hayas construido o la propia torre. Que tiene delante lo
- * decide el modo (`mode.objetivoDelante`), porque es quien lo conoce todo.
+ * Camina en linea recta HACIA LA TORRE, que esta en el centro del
+ * camino. Por eso lleva un `dir`: -1 si viene del portal de la derecha
+ * (anda hacia la izquierda) y +1 si viene del de la izquierda. Todo lo
+ * que tiene lado -a donde mira, por donde le entra el escudo, hacia
+ * donde sale despedido- se saca de ahi.
+ *
+ * Se para a golpear lo primero que se encuentre: al jugador, una pared
+ * que hayas construido, una torre o la propia base. Que tiene delante
+ * lo decide el modo (`mode.objetivoDelante`), porque es quien lo conoce
+ * todo.
  *
  * ESTADOS que le pueden poner las torres, las trampas y las armas:
  *   lento      ralentizado (hielo)
@@ -39,10 +45,13 @@ export class Zombie {
    * @param {number} laneY  altura del suelo del camino
    * @param {object} mode   el modo JULEN DEFENSA
    * @param {object} mult   { vida, dano } de la oleada
+   * @param {number} dir     -1 viene de la derecha, +1 de la izquierda
    */
-  constructor(def, x, laneY, mode, mult = {}) {
+  constructor(def, x, laneY, mode, mult = {}, dir = -1) {
     this.def = def;
     this.mode = mode;
+    /** Hacia donde anda: -1 izquierda, +1 derecha. */
+    this.dir = dir < 0 ? -1 : 1;
 
     this.w = def.w;
     this.h = def.h;
@@ -129,11 +138,14 @@ export class Zombie {
   recibir(amount, hx, hy, source, silencioso = false) {
     if (this.dead || amount <= 0) return;
 
-    // ESCUDO: lo lleva por delante, y camina hacia la izquierda, asi que
-    // solo le protege de lo que le llega desde ese lado (tus disparos).
-    // Lo que le pilla desde abajo o desde atras (trampas, explosiones) le
+    // ESCUDO: lo lleva por delante, o sea del lado hacia el que anda, y
+    // solo le protege de lo que le llega desde ahi (tus disparos). Lo
+    // que le pilla desde abajo o desde atras (trampas, explosiones) le
     // entra entero.
-    if (this.escudo > 0 && hx != null && hx < this.cx - this.w * 0.1) {
+    const porDelante = this.dir < 0
+      ? hx < this.cx - this.w * 0.1
+      : hx > this.cx + this.w * 0.1;
+    if (this.escudo > 0 && hx != null && porDelante) {
       const parado = Math.min(this.escudo, amount * 0.75);
       this.escudo -= parado;
       amount -= parado;
@@ -181,7 +193,8 @@ export class Zombie {
     if (this.def.vuela) return;
     const f = this.def.jefe ? 0.3 : 1;
     this.vy = -fuerza * f;
-    this.vx = empujeX * f;
+    // Hacia ATRAS: al reves de como anda, o sea de vuelta a su portal.
+    this.vx = -this.dir * empujeX * f;
     this.enAire = true;
     this.caidaDano = danoCaida;
     this.caidaFuente = fuente;
@@ -251,7 +264,7 @@ export class Zombie {
     }
 
     const vel = this.def.velocidad * (this.lento > 0 ? this.lentoFactor : 1);
-    this.x -= vel * dt;
+    this.x += this.dir * vel * dt;
     this.mode.limitarCarril(this);
   }
 
@@ -278,7 +291,7 @@ export class Zombie {
     }
 
     const vel = this.def.velocidad * (this.lento > 0 ? this.lentoFactor : 1);
-    this.x -= vel * dt;
+    this.x += this.dir * vel * dt;
     this.mode.limitarCarril(this);
   }
 

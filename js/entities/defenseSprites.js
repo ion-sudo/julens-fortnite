@@ -41,8 +41,9 @@ export function drawZombie(ctx, z, time, alpha) {
   ctx.translate(cx, pie);
   // Al morir se hunde un poco mientras se desvanece.
   if (z.dead) ctx.translate(0, (1 - alpha) * 12);
-  // Escala negativa en X: se dibuja mirando a +X y sale mirando a la izquierda.
-  ctx.scale(-s, s);
+  // Se dibuja mirando a +X. Con dir -1 (viene de la derecha) se voltea
+  // para que mire a la izquierda; con dir +1 se deja tal cual.
+  ctx.scale((z.dir ?? -1) * s, s);
 
   // Sombra (la del volador ya esta pintada en el suelo)
   if (!d.vuela) {
@@ -375,6 +376,39 @@ export function drawTower(ctx, s, time) {
       ctx.arc(22, 0, r, -Math.PI / 2.4, Math.PI / 2.4);
       ctx.stroke();
     }
+  } else if (def.id === 'gatling') {
+    // Seis canones en abanico, como un tambor.
+    ctx.fillRect(6, -9, 26, 18);
+    ctx.fillStyle = def.acento;
+    for (const oy of [-6, -2, 2, 6]) ctx.fillRect(30, oy - 1, 10, 2.5);
+  } else if (def.id === 'ventisca') {
+    ctx.fillStyle = def.acento;
+    ctx.beginPath();
+    ctx.moveTo(6, -9); ctx.lineTo(40, 0); ctx.lineTo(6, 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(28, 0, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (def.id === 'railgun') {
+    // Dos railes largos con la carga entre medias.
+    ctx.fillRect(4, -9, 52, 4);
+    ctx.fillRect(4, 5, 52, 4);
+    ctx.fillStyle = def.acento;
+    ctx.fillRect(10, -4, 34, 8);
+  } else if (def.id === 'orbital') {
+    // Un plato que apunta al cielo y un nucleo brillante.
+    ctx.fillRect(4, -7, 18, 14);
+    ctx.fillStyle = def.acento;
+    ctx.beginPath();
+    ctx.moveTo(20, -14); ctx.lineTo(40, -6); ctx.lineTo(40, 6); ctx.lineTo(20, 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(30, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
   } else if (def.id === 'reparadora') {
     // Una cruz en vez de canon: esta no dispara.
     ctx.fillStyle = '#ffffff';
@@ -605,6 +639,97 @@ export function drawTrap(ctx, s, time) {
       ctx.lineTo(x + 10 + golpe, y - 14);
       ctx.closePath();
       ctx.fill();
+      break;
+    }
+
+    // --- REJILLA LASER: barrotes de luz saliendo del suelo ---
+    case 'rejilla': {
+      ctx.fillStyle = d.color;
+      roundRectPath(ctx, x - w / 2, y - 6, w, 6, 2);
+      ctx.fill();
+      ctx.strokeStyle = d.acento;
+      ctx.lineWidth = 2;
+      const alto = 22 + (s.flash > 0 ? 8 : 0);
+      for (let i = 0; i < 5; i++) {
+        const px = x - w / 2 + 8 + i * ((w - 16) / 4);
+        ctx.globalAlpha = (vacia ? 0.5 : 1) * (0.55 + 0.45 * Math.abs(Math.sin(time * 4 + i)));
+        ctx.beginPath();
+        ctx.moveTo(px, y - 6);
+        ctx.lineTo(px, y - alto);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = vacia ? 0.5 : 1;
+      break;
+    }
+
+    // --- BOBINA TESLA: un poste corto con una esfera que chisporrotea ---
+    case 'bobina': {
+      ctx.fillStyle = d.color;
+      roundRectPath(ctx, x - w / 2, y - 10, w, 10, 3);
+      ctx.fill();
+      ctx.fillStyle = '#c8a04a';
+      ctx.fillRect(x - 5, y - 34, 10, 26);
+      ctx.fillStyle = d.acento;
+      ctx.beginPath();
+      ctx.arc(x, y - 40, 9 + (s.flash > 0 ? 3 : 0), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = d.acento;
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 3; i++) {
+        const a = time * 5 + (i * Math.PI * 2) / 3;
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(a) * 10, y - 40 + Math.sin(a) * 10);
+        ctx.lineTo(x + Math.cos(a) * 17, y - 40 + Math.sin(a) * 17);
+        ctx.stroke();
+      }
+      break;
+    }
+
+    // --- NAPALM: boquillas y una llamarada baja ---
+    case 'napalm': {
+      ctx.fillStyle = d.color;
+      roundRectPath(ctx, x - w / 2, y - 9, w, 9, 3);
+      ctx.fill();
+      for (let i = 0; i < 4; i++) {
+        const px = x - w / 2 + 12 + i * ((w - 24) / 3);
+        const llama = 12 + Math.abs(Math.sin(time * 6 + i)) * 12;
+        const g = ctx.createLinearGradient(px, y - 9, px, y - 9 - llama);
+        g.addColorStop(0, d.acento);
+        g.addColorStop(1, 'rgba(255, 210, 63, 0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(px - 5, y - 9);
+        ctx.lineTo(px, y - 9 - llama);
+        ctx.lineTo(px + 5, y - 9);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    }
+
+    // --- FOSO DE CUCHILLAS: un hueco negro con hojas girando ---
+    case 'foso': {
+      ctx.fillStyle = '#0b0e16';
+      roundRectPath(ctx, x - w / 2, y - 14, w, 14, 3);
+      ctx.fill();
+      ctx.fillStyle = d.color;
+      ctx.fillRect(x - w / 2, y - 16, w, 3);
+      for (let i = 0; i < 3; i++) {
+        const cx2 = x - w / 2 + 18 + i * ((w - 36) / 2);
+        const giro = time * 9 + i;
+        ctx.save();
+        ctx.translate(cx2, y - 7);
+        ctx.rotate(giro);
+        ctx.fillStyle = d.acento;
+        for (let k = 0; k < 4; k++) {
+          ctx.rotate(Math.PI / 2);
+          ctx.beginPath();
+          ctx.moveTo(0, 0); ctx.lineTo(10, -3); ctx.lineTo(10, 3);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
       break;
     }
 

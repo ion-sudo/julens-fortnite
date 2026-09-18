@@ -3,9 +3,15 @@
  * ---------------------------------------------------------------
  * JULEN DEFENSA: tower defense estilo Fortnite.
  *
- * Una TORRE con un faro rojo, un CAMINO llano y un PORTAL por el que
- * salen los zombis. Hay que aguantar todas las OLEADAS (DEFENSA.oleadas,
- * en data/defense.js) sin que tiren la torre.
+ * Un mapa PEQUENO: un camino llano y corto con la TORRE justo en el
+ * centro y DOS PORTALES, uno en cada punta. Los zombis salen por los
+ * dos lados, asi que no vale con atrincherarse mirando a un sitio: hay
+ * que repartir torres y trampas a izquierda y derecha. Hay que aguantar
+ * todas las OLEADAS (DEFENSA.oleadas, en data/defense.js) sin que
+ * tiren la torre.
+ *
+ * Y lo que pones SE ROMPE: los zombis golpean las torres, las trampas
+ * se gastan, y lo que cae no se recupera (ver systems/defense/structures.js).
  *
  * EL RITMO es un ciclo de dia y noche:
  *
@@ -79,12 +85,26 @@ export class JulenDefense extends Minigame {
     // Las armas de este modo (las de siempre y las nuevas de defensa).
     setWeaponPool('defensa');
 
-    // --- El camino: el tramo llano mas largo del mapa ---
-    const campo = this.bestField(900) || this.bestField(400);
-    this.carril = { x0: campo.run.x, x1: campo.run.x + campo.run.w, y: campo.isla.y };
+    // --- El camino: un trozo llano PEQUENO, recortado y centrado ---
+    // Se busca el tramo llano mas ancho que haya y luego se recorta a
+    // DEFENSA.anchoCamino por el centro: el mapa tiene que ser corto
+    // para que los dos lados esten siempre a tiro.
+    const campo = this.bestField(DEFENSA.anchoCamino) || this.bestField(900) || this.bestField(400);
+    const medio = campo.run.x + campo.run.w / 2;
+    const mitad = Math.min(campo.run.w, DEFENSA.anchoCamino) / 2;
+    this.carril = { x0: medio - mitad, x1: medio + mitad, y: campo.isla.y };
 
+    // Los dos sitios por donde salen los zombis, uno en cada punta.
+    this.portales = [
+      { x: this.carril.x0 + 20, dir: 1 },    // el de la izquierda: andan hacia la derecha
+      { x: this.carril.x1 - 20, dir: -1 },   // el de la derecha: andan hacia la izquierda
+    ];
+    /** Por que portal toca sacar al siguiente: se van turnando. */
+    this.turnoPortal = Math.random() < 0.5 ? 0 : 1;
+
+    // LA TORRE VA EN EL CENTRO, con los dos portales a la misma distancia.
     this.base = {
-      x: this.carril.x0 + 60,
+      x: medio,
       y: this.carril.y,
       vida: DEFENSA.vidaBase,
       vidaMax: DEFENSA.vidaBase,
@@ -131,7 +151,12 @@ export class JulenDefense extends Minigame {
     this.zaps = [];
     this.anillos = [];
     this.textos = [];
-    this.banner = { texto: 'JULEN DEFENSA', sub: 'Es de dia: prepara la defensa', vida: 3.5, color: '#ffd23f' };
+    this.banner = {
+      texto: 'JULEN DEFENSA',
+      sub: 'Vienen por los DOS lados: reparte la defensa',
+      vida: 3.5,
+      color: '#ffd23f',
+    };
 
     // --- Lo que golpean los zombis ---
     // Se crean una vez y se reutilizan: un zombi pregunta que tiene
@@ -152,6 +177,12 @@ export class JulenDefense extends Minigame {
     this._golpeMuro = {
       estructura: null,
       golpear: (dano) => this._golpeMuro.estructura?.takeDamage(dano * 1.6, null),
+    };
+    // Una torre que les cierra el paso: la golpean hasta tirarla, y
+    // cuando cae no se puede levantar otra vez.
+    this._golpeTorre = {
+      objetivo: null,
+      golpear: (dano) => this.estructuras.danar(this._golpeTorre.objetivo, dano * 1.3),
     };
 
     // --- El jugador: un arma para empezar y municion a tope ---
@@ -360,12 +391,9 @@ export class JulenDefense extends Minigame {
       return;
     }
     this.dinero -= accion.precio;
-    this.estructuras.aplicarMejora(s, accion);
+    this.estructuras.aplicarMejora(s);
     playReward();
-    this.game.showMessage(
-      accion.tipo === 'mejorar' ? `${s.def.name} · nivel ${s.nivel}` : `${s.def.name} recargada`,
-      'epic'
-    );
+    this.game.showMessage(`${s.def.name} · nivel ${s.nivel}`, 'epic');
   }
 
   /** Devuelve vida a la torre a cambio de dinero. */
@@ -452,7 +480,9 @@ export class JulenDefense extends Minigame {
     playTrueno();
     this.banner = {
       texto: 'ANOCHECE',
-      sub: this.comp.jefe ? `Oleada ${this.oleada} · ¡viene un JEFE!` : `Oleada ${this.oleada} · ${cola.length} zombis`,
+      sub: this.comp.jefe
+        ? `Oleada ${this.oleada} · ¡viene un JEFE! · por los dos lados`
+        : `Oleada ${this.oleada} · ${cola.length} zombis por los dos lados`,
       vida: 3,
       color: '#ff6a6a',
     };
@@ -481,8 +511,13 @@ export class JulenDefense extends Minigame {
         : this.comp.vida,
       dano: this.comp.dano,
     };
-    const x = this.carril.x1 - 40 - Math.random() * 30;
-    this.zombies.push(new Zombie(def, x, this.carril.y, this, mult));
+    // De un portal y del otro, turnandose, para que siempre haya faena
+    // en los dos lados. El jefe sale por uno al azar.
+    const portal = this.portales[def.jefe ? Math.floor(Math.random() * 2) : this.turnoPortal];
+    this.turnoPortal = (this.turnoPortal + 1) % this.portales.length;
+
+    const x = portal.x - portal.dir * (20 + Math.random() * 30);
+    this.zombies.push(new Zombie(def, x, this.carril.y, this, mult, portal.dir));
 
     if (def.jefe) {
       playTrueno();
@@ -512,22 +547,38 @@ export class JulenDefense extends Minigame {
      LO QUE PREGUNTAN LOS ZOMBIS
      ============================================================= */
 
-  /** Que tiene delante un zombi para golpear, o null si puede andar. */
+  /**
+   * Que tiene delante un zombi para golpear, o null si puede andar.
+   *
+   * "Delante" depende del lado por el que venga (z.dir): el que sale
+   * por la izquierda tiene delante lo que esta a su derecha, y al reves.
+   */
   objetivoDelante(z) {
-    // 1) La torre
-    if (z.x <= this.base.x + 44) return this._golpeBase;
+    const dir = z.dir;
+    // El morro: el borde con el que va por delante.
+    const morro = dir < 0 ? z.x : z.x + z.w;
+
+    // 1) La torre, que esta en el centro y se llega a ella por los dos lados
+    if (dir < 0 ? morro <= this.base.x + 44 : morro >= this.base.x - 44) return this._golpeBase;
     // Los voladores solo se paran en la torre: pasan por encima de todo lo demas.
     if (z.def.vuela) return null;
 
     // 2) El jugador, pegado a el y a su altura
     const p = this.player;
-    if (p.alive && p.x + p.w > z.x - 16 && p.x < z.x + z.w * 0.6 &&
+    if (p.alive && p.x + p.w > z.x - 16 && p.x < z.x + z.w + 16 &&
         p.y + p.h > z.y + 8 && p.y < z.y + z.h) {
       return this._golpeJugador;
     }
 
-    // 3) Algo que haya construido el jugador
-    const caja = { x: z.x - 10, y: z.y + 4, w: 12, h: z.h - 8 };
+    // 3) Una torre puesta en medio del camino: la rompen para pasar
+    const torre = this.estructuras.bloqueoDelante(z, dir);
+    if (torre) {
+      this._golpeTorre.objetivo = torre;
+      return this._golpeTorre;
+    }
+
+    // 4) Algo que haya construido el jugador
+    const caja = { x: dir < 0 ? z.x - 10 : z.x + z.w - 2, y: z.y + 4, w: 12, h: z.h - 8 };
     for (const plat of this.world.getPlatformsNear(caja, 0)) {
       const st = plat.structure;
       if (!st || st.dead) continue;
@@ -553,6 +604,8 @@ export class JulenDefense extends Minigame {
       this.base.hitFlash = 0.3;
     } else if (objetivo === this._golpeMuro) {
       objetivo.estructura?.takeDamage(e.danoBase, null);
+    } else if (objetivo === this._golpeTorre) {
+      this.estructuras.danar(objetivo.objetivo, e.danoBase);
     } else if (objetivo === this._golpeJugador) {
       const p = this.player;
       p.takeDamage(e.dano * 0.5, p.x + p.w / 2, p.y + 20, null);
@@ -566,17 +619,25 @@ export class JulenDefense extends Minigame {
     this.explosion(z.cx, z.y + z.h / 2, e.radio, e.dano, null);
   }
 
-  /** Que ningun zombi se salga del camino. */
+  /** Que ningun zombi se salga del camino, por ninguna de las dos puntas. */
   limitarCarril(z) {
-    z.x = Math.max(this.carril.x0, Math.min(this.carril.x1 + 60, z.x));
+    z.x = Math.max(this.carril.x0 - 60, Math.min(this.carril.x1 + 60, z.x));
   }
 
   /* =============================================================
      EFECTOS DE LAS ARMAS
      ============================================================= */
 
-  /** Dano en area: cohetes, morteros. */
+  /**
+   * Dano en area: cohetes, morteros, minas y los zombis bomba.
+   *
+   * Si la explosion NO es tuya (`fuente` vacia, o sea un zombi bomba),
+   * tambien se lleva por delante las torres y trampas que pille cerca.
+   * Tus cohetes no rompen tus propias defensas: faltaria mas.
+   */
   explosion(x, y, radio, dano, fuente) {
+    if (!fuente) this.estructuras.danarCerca(x, radio, dano);
+
     for (const z of this.zombies) {
       if (z.dead) continue;
       const alcance = radio + z.w / 2;
@@ -737,7 +798,10 @@ export class JulenDefense extends Minigame {
     if (!this.carril) return;
     const noche = this.game.ambience.oscuridad > 0.4;
 
-    drawPortal(ctx, this.carril.x1 - 20, this.carril.y, time, this.fase === 'noche');
+    // Los dos portales, uno en cada punta del camino.
+    for (const portal of this.portales) {
+      drawPortal(ctx, portal.x, this.carril.y, time, this.fase === 'noche');
+    }
     this.estructuras.draw(ctx, camera, time);
 
     // La torre se aclara si el jugador pasa por delante: si no, lo tapa.

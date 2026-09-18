@@ -281,11 +281,12 @@ export const MODES = [
   {
     id: 'defensa',
     name: 'Julen Defensa',
-    tagline: 'Defiende la torre de noche',
+    tagline: 'Vienen por los dos lados',
     icon: 'defensa', color: '#e8434f',
-    desc: 'Aguanta 30 oleadas de zombis: disparas tu, colocas torres y ' +
-          'trampas, y de dia te preparas. La ultima trae de todo y un jefe.',
-    bullets: ['Oleadas de zombis', 'Torres y trampas', 'Dia y noche', 'Jefes'],
+    desc: 'Mapa pequeno con la torre en el centro y un portal a cada lado. ' +
+          'Aguanta 30 oleadas: disparas tu, colocas torres y trampas, y de dia ' +
+          'te preparas. Lo que te rompan no vuelve. La ultima trae de todo y un jefe.',
+    bullets: ['Zombis por los dos lados', 'Torres y trampas que se rompen', 'Dia y noche', 'Jefes'],
     ready: true,
     rules: { launch: 'defensa' },
   },

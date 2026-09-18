@@ -11,18 +11,25 @@
  *            con las balas normales del juego (mismo sistema, mismos
  *            impactos), cada una con su efecto.
  *   TRAMPAS  actuan sobre quien las pisa (o esta cerca) y se GASTAN:
- *            tienen un numero de usos. Mejorarlas las rellena.
+ *            tienen un numero de usos.
  *
- * Las torres no se rompen: son la inversion del jugador, y perderlas en
- * mitad de una oleada solo frustraria. Lo que se gasta son las trampas.
+ * TODO LO COLOCADO SE ROMPE, y cuando se rompe NO VUELVE:
+ *
+ *   - los zombis se paran a golpear las torres que les cierran el paso,
+ *   - las explosiones (las de los zombis bomba) se llevan por delante
+ *     lo que tengan cerca, torres y trampas,
+ *   - una trampa que gasta su ultimo uso tambien desaparece.
+ *
+ * No hay recarga ni reparacion de nada de esto: lo que cae, cae, y para
+ * volver a tenerlo hay que pagarlo otra vez. Por eso ahora las torres
+ * son una decision y no una inversion para siempre.
  */
 
 import {
-  NIVEL_MAX, multNivel, usosMaximos, precioMejora, precioRecarga,
+  DEFENSA, NIVEL_MAX, multNivel, usosMaximos, precioMejora, vidaEstructura,
 } from '../../data/defense.js';
 import { drawTower, drawTrap } from '../../entities/defenseSprites.js';
-import { playShotAt } from '../../core/audio.js';
-import { control, segunControl } from '../../ui/controlHints.js';
+import { playShotAt, playExplosionAt } from '../../core/audio.js';
 
 /** Color de las balas de las torres segun su nivel. */
 const RAREZA_NIVEL = [null, 'rare', 'epic', 'legendary'];
@@ -57,9 +64,16 @@ export class DefenseStructures {
   puedeColocar(def, tipo, x) {
     const c = this.mode.carril;
     const w = this.ancho(def, tipo);
+    const margen = DEFENSA.margenPortal;
 
-    if (x - w / 2 < this.mode.base.x + 70) return { ok: false, motivo: 'Demasiado pegado a la torre' };
-    if (x + w / 2 > c.x1 - 70) return { ok: false, motivo: 'Ahi salen los zombis' };
+    // La torre esta en el CENTRO: hay que dejarle sitio por los dos lados.
+    if (x - w / 2 < this.mode.base.x + 70 && x + w / 2 > this.mode.base.x - 70) {
+      return { ok: false, motivo: 'Demasiado pegado a la torre' };
+    }
+    // Y tampoco encima de ninguno de los dos portales.
+    if (x - w / 2 < c.x0 + margen || x + w / 2 > c.x1 - margen) {
+      return { ok: false, motivo: 'Ahi salen los zombis' };
+    }
 
     // Algunas tienen tope (la de reparacion): si no, poner diez seria
     // una torre inmortal.
@@ -85,6 +99,11 @@ export class DefenseStructures {
       golpes: new Map(),       // trampa: cuando golpeo por ultima vez a cada zombi
       usos: 0,
       usosMax: 0,
+      // Lo que aguanta antes de romperse (y romperse aqui es para siempre).
+      vida: vidaEstructura(def, tipo, 1),
+      vidaMax: vidaEstructura(def, tipo, 1),
+      dead: false,
+      danoFlash: 0,
     };
     if (tipo === 'trampa') {
       s.usosMax = usosMaximos(def, 1);
@@ -112,23 +131,82 @@ export class DefenseStructures {
 
   /**
    * Que se le puede hacer a algo colocado, y cuanto cuesta.
-   * @returns {{tipo:'mejorar'|'recargar', precio:number}|null}
+   *
+   * Solo MEJORAR. La recarga ya no existe: una trampa gastada no se
+   * rellena, desaparece, y una torre rota tampoco se levanta. Mejorar
+   * mientras siguen en pie si las deja como nuevas.
+   *
+   * @returns {{tipo:'mejorar', precio:number}|null}
    */
   accionMejora(s) {
     if (s.nivel < NIVEL_MAX) return { tipo: 'mejorar', precio: precioMejora(s.def, s.nivel) };
-    if (s.tipo === 'trampa' && s.usos < s.usosMax) return { tipo: 'recargar', precio: precioRecarga(s.def) };
     return null;
   }
 
-  aplicarMejora(s, accion) {
-    if (accion.tipo === 'mejorar') {
-      s.nivel++;
-      if (s.tipo === 'trampa') s.usosMax = usosMaximos(s.def, s.nivel);
+  aplicarMejora(s) {
+    s.nivel++;
+    if (s.tipo === 'trampa') {
+      s.usosMax = usosMaximos(s.def, s.nivel);
+      s.usos = s.usosMax;
     }
-    // Mejorar una trampa tambien la deja llena.
-    if (s.tipo === 'trampa') s.usos = s.usosMax;
+    // Sube el tope de vida y se queda entera.
+    s.vidaMax = vidaEstructura(s.def, s.tipo, s.nivel);
+    s.vida = s.vidaMax;
     s.flash = 1;
     this.mode.particles.spark(s.x, s.y - 30, '#ffd23f', 18, 280);
+  }
+
+  /* =============================================================
+     ROMPERSE (y no volver)
+     ============================================================= */
+
+  /**
+   * Le pega a algo colocado. Lo usan los zombis que golpean una torre y
+   * las explosiones.
+   */
+  danar(s, dano) {
+    if (!s || s.dead || dano <= 0) return;
+    s.vida -= dano;
+    s.danoFlash = 0.2;
+    this.mode.particles.spark(s.x, s.y - 30, '#e8434f', 4, 160);
+    if (s.vida <= 0) this.destruir(s);
+  }
+
+  /** Dano en area: lo que revienta cerca se lleva su parte. */
+  danarCerca(x, radio, dano) {
+    for (const s of [...this.lista]) {
+      const d = Math.abs(s.x - x);
+      if (d > radio) continue;
+      this.danar(s, Math.round(dano * (1 - Math.min(1, d / radio) * 0.6)));
+    }
+  }
+
+  /** Fuera del mapa y de la lista. Esto no tiene vuelta atras. */
+  destruir(s, motivo = 'destruida') {
+    if (s.dead) return;
+    s.dead = true;
+    const i = this.lista.indexOf(s);
+    if (i !== -1) this.lista.splice(i, 1);
+
+    this.mode.particles.spark(s.x, s.y - 26, s.def.acento || '#e8434f', 20, 300);
+    this.mode.particles.puff(s.x, s.y - 16, 'rgba(120, 120, 130, 0.6)', 10);
+    playExplosionAt(s.x, s.y - 20);
+    this.mode.game.showMessage(`${s.def.name} ${motivo} · ya no vuelve`, 'legendary');
+  }
+
+  /** Lo colocado que le cierra el paso a un zombi, o null. */
+  bloqueoDelante(z, dir) {
+    for (const s of this.lista) {
+      // Las trampas van en el suelo: se pisan, no se chocan.
+      if (s.tipo !== 'torre') continue;
+      const medio = this.ancho(s.def, s.tipo) / 2;
+      const morro = dir < 0 ? z.x : z.x + z.w;
+      if (Math.abs(morro - s.x) > medio + 12) continue;
+      // Solo lo que tiene DELANTE, no lo que ya ha pasado.
+      if (dir < 0 ? s.x > morro : s.x < morro) continue;
+      return s;
+    }
+    return null;
   }
 
   /** Al empezar oleada se olvidan los golpes de la anterior. */
@@ -142,8 +220,11 @@ export class DefenseStructures {
 
   update(dt, zombies) {
     this.reloj += dt;
-    for (const s of this.lista) {
+    // Copia de la lista: algo puede romperse (y salir de ella) a mitad.
+    for (const s of [...this.lista]) {
+      if (s.dead) continue;
       s.flash = Math.max(0, s.flash - dt * 4);
+      s.danoFlash = Math.max(0, s.danoFlash - dt);
       if (s.tipo === 'torre') this._torre(s, dt, zombies);
       else this._trampa(s, dt, zombies);
     }
@@ -230,12 +311,22 @@ export class DefenseStructures {
       s.cooldown = Math.max(0, s.cooldown - dt);
       if (s.cooldown > 0) return;
       // Los dardos van a ras de suelo: a un volador no le llegan.
-      const hay = zombies.some((z) => !z.dead && !z.enAire && !z.def.vuela && z.cx > s.x && z.cx - s.x < d.alcance);
-      if (!hay) return;
+      // Como ahora los zombis vienen por los DOS lados, dispara hacia
+      // el lado que tenga alguno a tiro (el mas cercano manda).
+      let lado = 0;
+      let mejorD = d.alcance;
+      for (const z of zombies) {
+        if (z.dead || z.enAire || z.def.vuela) continue;
+        const dist = Math.abs(z.cx - s.x);
+        if (dist > mejorD) continue;
+        mejorD = dist;
+        lado = z.cx >= s.x ? 1 : -1;
+      }
+      if (!lado) return;
       s.cooldown = d.espera;
       this._gastar(s);
       this.mode.game.bullets.spawn({
-        x: s.x + 16, y: s.y - 42, angle: 0, speed: 1300,
+        x: s.x + 16 * lado, y: s.y - 42, angle: lado > 0 ? 0 : Math.PI, speed: 1300,
         damage: dano, range: d.alcance + 40, pierce: false,
         rarity: 'uncommon', kind: 'bala', owner: jugador,
       });
@@ -243,8 +334,8 @@ export class DefenseStructures {
       return;
     }
 
-    // --- Electrica: descarga a todo lo que tenga cerca ---
-    if (d.id === 'electrica') {
+    // --- Descarga (electrica y bobina): a todo lo que tenga cerca ---
+    if (d.descarga || d.id === 'electrica') {
       s.cooldown = Math.max(0, s.cooldown - dt);
       if (s.cooldown > 0) return;
       const cerca = zombies.filter((z) => !z.dead && Math.abs(z.cx - s.x) < d.radio);
@@ -283,7 +374,7 @@ export class DefenseStructures {
         z.congelar(d.congela * (1 + (s.nivel - 1) * 0.25));
         z.ralentizar(0.5, 3);
         this.mode.particles.spark(z.cx, pie, '#bff1ff', 12, 200);
-      } else if (d.id === 'parrilla') {
+      } else if (d.quema) {
         z.quemar(d.dps * multNivel(s.nivel), d.quema, jugador);
         z.takeDamage(dano, z.cx, pie, jugador);
       } else if (d.id === 'lanzador') {
@@ -314,11 +405,14 @@ export class DefenseStructures {
     }
   }
 
-  /** Gasta un uso y avisa si se ha acabado. */
+  /**
+   * Gasta un uso. Al ultimo, la trampa SE ROMPE y desaparece: no hay
+   * recarga que valga, hay que comprar otra.
+   */
   _gastar(s) {
     s.usos--;
     s.flash = 1;
-    if (s.usos === 0) this.mode.game.showMessage(`${s.def.name} gastada · ${control('upgrade')} para recargarla`);
+    if (s.usos <= 0) this.destruir(s, 'gastada');
   }
 
   /* =============================================================
@@ -330,6 +424,25 @@ export class DefenseStructures {
       if (!camera.isVisible(s.x - 60, s.y - 110, 120, 120)) continue;
       if (s.tipo === 'torre') drawTower(ctx, s, time);
       else drawTrap(ctx, s, time);
+      this._barraVida(ctx, s);
     }
+  }
+
+  /**
+   * Barrita de vida: solo aparece cuando ya le han dado. Estando
+   * entera no se ve nada, para no llenar el camino de barras.
+   */
+  _barraVida(ctx, s) {
+    if (s.vida >= s.vidaMax) return;
+    const w = 44;
+    const y = s.y - (s.tipo === 'torre' ? 74 : 60);
+    const f = Math.max(0, s.vida / s.vidaMax);
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(10, 16, 34, 0.8)';
+    ctx.fillRect(s.x - w / 2, y, w, 5);
+    ctx.fillStyle = s.danoFlash > 0 ? '#ffffff' : (f < 0.35 ? '#e8434f' : '#ffb03a');
+    ctx.fillRect(s.x - w / 2, y, w * f, 5);
+    ctx.restore();
   }
 }

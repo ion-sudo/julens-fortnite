@@ -79,7 +79,7 @@ export const MINIGAMES = [
     // (arena, marcador, pantalla de fin y record). `hidden` la saca de
     // la pantalla de MINIJUEGOS.
     id: 'defensa', name: 'Julen Defensa', icon: 'diana', color: '#e8434f',
-    desc: 'Defiende la torre de oleadas de zombis.',
+    desc: 'Defiende la torre: los zombis vienen por los dos lados.',
     goal: 'Aguanta las 30 oleadas sin que caiga la torre',
     score: 'points', unit: 'oleadas', ready: true,
     hidden: true,

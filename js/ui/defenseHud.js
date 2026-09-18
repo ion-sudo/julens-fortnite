@@ -14,13 +14,14 @@
 import { roundRectPath } from '../core/utils.js';
 import { rarityColor } from '../data/rarities.js';
 import { findWeapon } from '../data/weapons.js';
-import { DEFENSA, TORRES, TRAMPAS, TIENDA_ARMAS } from '../data/defense.js';
+import { DEFENSA, TORRES, TRAMPAS, TIENDA_ARMAS, vidaEstructura } from '../data/defense.js';
 import { control, segunControl } from './controlHints.js';
 
 const FUENTE = '"Trebuchet MS", sans-serif';
-// Ancha y a CUATRO columnas: con las torres, trampas y armas nuevas, a
-// tres columnas la pestana de armas ya no cabia en alto.
-const PANEL = { w: 1090, h: 480 };
+// Ancha y a CINCO columnas: con las torres, trampas y armas caras
+// nuevas (catorce, catorce y dieciseis) a cuatro columnas se salia por
+// abajo. Las tarjetas son algo mas estrechas, pero caben todas.
+const PANEL = { w: 1090, h: 560 };
 const PESTANAS = [
   { id: 'torres', nombre: 'TORRES' },
   { id: 'trampas', nombre: 'TRAMPAS' },
@@ -59,10 +60,10 @@ export function botonesTienda(view, pestana) {
     lista.push({ accion: 'pestana', valor: p.id, nombre: p.nombre, x: o.x + 24 + i * 150, y: o.y + 62, w: 140, h: 36 });
   });
 
-  const cols = 4;
-  const cw = 250;
+  const cols = 5;
+  const cw = 205;
   const ch = 96;
-  const gap = 14;
+  const gap = 12;
   const x0 = o.x + (PANEL.w - (cols * cw + (cols - 1) * gap)) / 2;
   const y0 = o.y + 116;
   catalogo(pestana).forEach((c, i) => {
@@ -237,9 +238,9 @@ function ayudaMejora(ctx, m, view) {
   const accion = m.estructuras.accionMejora(s);
   const lineas = [];
   if (!accion) lineas.push(`${s.def.name} · nivel maximo`);
-  else if (accion.tipo === 'mejorar') lineas.push(`G · Mejorar ${s.def.name} a nivel ${s.nivel + 1} ($${accion.precio})`);
-  else lineas.push(`G · Recargar ${s.def.name} ($${accion.precio})`);
-  if (s.tipo === 'trampa') lineas.push(`Usos: ${s.usos} / ${s.usosMax}`);
+  else lineas.push(`${control('upgrade')} · Mejorar ${s.def.name} a nivel ${s.nivel + 1} ($${accion.precio})`);
+  if (s.tipo === 'trampa') lineas.push(`Usos: ${s.usos} / ${s.usosMax} · al gastarse desaparece`);
+  else lineas.push(`Vida: ${Math.max(0, Math.round(s.vida))} / ${s.vidaMax}`);
 
   cajaAyuda(ctx, view, lineas, 'rgba(255, 210, 63, 0.7)');
 }
@@ -355,8 +356,9 @@ function tarjeta(ctx, b, m, encima) {
   if (b.tipo === 'torre') {
     detalle = it.repara
       ? `Repara ${it.repara} de vida/s`
-      : `Dano ${it.dano} · Alcance ${it.alcance}`;
+      : `Dano ${it.dano} · Alc. ${it.alcance}`;
     if (it.maximo) detalle += ` · max ${it.maximo}`;
+    detalle += ` · ${vidaEstructura(it, 'torre')} vida`;
     color = it.acento;
   } else if (b.tipo === 'trampa') {
     detalle = it.dano > 0 ? `Dano ${it.dano} · ${it.usos} usos` : `Frena · ${it.usos} usos`;
@@ -388,7 +390,7 @@ function tarjeta(ctx, b, m, encima) {
   ctx.textAlign = 'left';
   ctx.font = `bold 15px ${FUENTE}`;
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(nombre, b.x + 16, b.y + 24);
+  ctx.fillText(recortar(ctx, nombre, b.w - 30), b.x + 16, b.y + 24);
 
   ctx.font = `12px ${FUENTE}`;
   ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';

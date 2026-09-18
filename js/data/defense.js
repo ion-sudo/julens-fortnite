@@ -33,13 +33,25 @@ export const DEFENSA = {
    * El dinero inicial sube igual (350 -> 650) para que la primera
    * oleada se pueda preparar como siempre.
    */
-  dineroInicial: 650,
+  dineroInicial: 900,
   /** Segundos de DIA antes de la primera oleada (hay que montarlo todo). */
   preparacionPrimera: 40,
   /** Segundos de DIA entre oleada y oleada. */
   preparacion: 25,
   /** Vida de la torre. A cero, se pierde. */
   vidaBase: 1500,
+  /**
+   * ANCHO DEL CAMINO, en pixeles. Es un mapa PEQUENO a proposito: la
+   * torre va justo en el centro y los zombis salen por los DOS
+   * portales, uno a cada lado. Es aposta un poco mas estrecho que lo
+   * que se ve en pantalla: desde la torre se ven los dos portales, asi
+   * que siempre sabes por donde te viene. Con un camino largo daba
+   * tiempo a matarlos de lejos; asi hay que repartir las defensas y
+   * decidir que lado aguanta solo.
+   */
+  anchoCamino: 1040,
+  /** Cuanto del ancho se deja libre a cada lado, junto a los portales. */
+  margenPortal: 70,
   /** Segundos que tarda el jugador en volver a la torre si lo tumban. */
   respawnJugador: 4,
   /**
@@ -48,8 +60,12 @@ export const DEFENSA = {
    * con la que tienes.
    */
   reparacion: { precio: 260, cantidad: 300 },
-  /** Dinero extra por aguantar una oleada: cuanto mas avanzada, mas. */
-  bonusOleada: (n) => 100 + n * 25,
+  /**
+   * Dinero extra por aguantar una oleada: cuanto mas avanzada, mas.
+   * Da mas que antes porque ahora hay DOS lados que cubrir y las torres
+   * rotas no vuelven: parte de este dinero es para reponerlas.
+   */
+  bonusOleada: (n) => 150 + n * 45,
 };
 
 /** Pavos de la cuenta que se ganan por cada oleada aguantada. */
@@ -276,6 +292,38 @@ export const TORRES = [
     precio: 880, repara: 10, maximo: 2,
     color: '#2f5a3a', acento: '#5fd14a',
   },
+
+  /* ---------- LAS CARAS ----------
+     Son para la segunda mitad de la partida: cuestan lo que cuestan
+     tres torres normales, pero una sola aguanta un lado entero. */
+  {
+    id: 'gatling', name: 'Gatling Pesada',
+    desc: 'Un muro de balas que no para nunca.',
+    precio: 1200, alcance: 620, dano: 18, cadencia: 9, velocidadBala: 1700,
+    perfora: true, dispersion: 0.06,
+    color: '#4a4436', acento: '#ffd23f',
+  },
+  {
+    id: 'ventisca', name: 'Torre Ventisca',
+    desc: 'Los deja a rastras y de paso les hace dano.',
+    precio: 1600, alcance: 620, dano: 46, cadencia: 2.2, velocidadBala: 1500,
+    efecto: 'hielo', perfora: true,
+    color: '#2f5a7a', acento: '#bff1ff',
+  },
+  {
+    id: 'railgun', name: 'Torre Railgun',
+    desc: 'Un tiro que cruza el mapa y atraviesa la fila entera.',
+    precio: 2200, alcance: 1600, dano: 320, cadencia: 0.3, velocidadBala: 3200,
+    perfora: true, objetivo: 'mas-vida', alcanceBala: 1800,
+    color: '#33405e', acento: '#7ff0ff',
+  },
+  {
+    id: 'orbital', name: 'Canon Orbital',
+    desc: 'Cada disparo borra medio camino.',
+    precio: 3200, alcance: 1100, dano: 190, cadencia: 0.4, velocidadBala: 1300,
+    efecto: 'explosion', radio: 230,
+    color: '#4a3a5c', acento: '#ff8ae0',
+  },
 ];
 
 /* =============================================================
@@ -348,6 +396,36 @@ export const TRAMPAS = [
     precio: 270, usos: 18, dano: 14, espera: 0.8, w: 40, empuje: 560, fuerza: 260,
     color: '#6b5a3a', acento: '#ffb03a',
   },
+
+  /* ---------- LAS CARAS ----------
+     Muy caras y con pocos usos: cuando se gastan DESAPARECEN, asi que
+     son para el momento justo, no para dejarlas puestas toda la
+     partida. */
+  {
+    id: 'rejilla', name: 'Rejilla Laser',
+    desc: 'Corta a todo el que la cruza.',
+    precio: 500, usos: 30, dano: 95, espera: 0.5, w: 72,
+    color: '#3a2f4a', acento: '#ff5ad0',
+  },
+  {
+    // descarga: como la electrica, pero con mucho mas radio y pegada
+    id: 'bobina', name: 'Bobina Tesla',
+    desc: 'Fulmina a todo lo que tenga cerca, incluso volando.',
+    precio: 750, usos: 20, dano: 130, espera: 0.9, w: 58, radio: 210, descarga: true,
+    color: '#2f3a5c', acento: '#9ff0ff',
+  },
+  {
+    id: 'napalm', name: 'Surtidor de Napalm',
+    desc: 'Deja el suelo ardiendo un buen rato.',
+    precio: 950, usos: 28, dano: 30, espera: 0.5, w: 86, quema: 6, dps: 60,
+    color: '#5c2a1a', acento: '#ff6a2a',
+  },
+  {
+    id: 'foso', name: 'Foso de Cuchillas',
+    desc: 'Lo mas bestia del catalogo. Pocos usos y se acabo.',
+    precio: 1400, usos: 16, dano: 280, espera: 0.5, w: 92,
+    color: '#3a3f4c', acento: '#e8434f',
+  },
 ];
 
 /* =============================================================
@@ -372,9 +450,22 @@ export function precioMejora(def, nivel) {
   return Math.round(def.precio * (0.7 + nivel * 0.3));
 }
 
-/** Lo que cuesta rellenar los usos de una trampa ya al maximo. */
-export function precioRecarga(def) {
-  return Math.round(def.precio * 0.45);
+/**
+ * VIDA de una torre o una trampa colocada.
+ *
+ * Ahora lo colocado SE ROMPE: los zombis se paran a golpear las torres
+ * y las explosiones se llevan por delante lo que tengan cerca. Cuando
+ * algo llega a cero, DESAPARECE y no se puede recuperar: hay que
+ * comprarlo otra vez. Lo mismo con las trampas al gastar su ultimo uso.
+ *
+ * La vida sale del precio, asi que una torre cara aguanta mas sin tener
+ * que apuntar un numero a mano en cada una.
+ */
+export function vidaEstructura(def, tipo, nivel = 1) {
+  // Aguantan bastante: una torre tiene que durar varias oleadas, o
+  // comprarlas no compensaria con lo que cuestan ahora.
+  const base = tipo === 'torre' ? 500 + def.precio * 1.6 : 220 + def.precio * 0.8;
+  return Math.round(base * (1 + (nivel - 1) * 0.5));
 }
 
 /* =============================================================
@@ -395,4 +486,13 @@ export const TIENDA_ARMAS = [
   { id: 'incendiario', arma: 'incendiario', rareza: 'epic', precio: 440 },
   { id: 'ballesta', arma: 'ballesta', rareza: 'epic', precio: 530 },
   { id: 'lanzagranadas', arma: 'lanzagranadas', rareza: 'legendary', precio: 790 },
+
+  /* ---------- LAS CARAS ----------
+     Las armas gordas del juego, a precio de oleada 10 en adelante. */
+  { id: 'subfusil-tambor', arma: 'subfusil-tambor', rareza: 'epic', precio: 650 },
+  { id: 'fusil-tambor', arma: 'fusil-tambor', rareza: 'epic', precio: 700 },
+  { id: 'sniper', arma: 'sniper', rareza: 'legendary', precio: 1100 },
+  { id: 'escopeta-oni', arma: 'escopeta-oni', rareza: 'legendary', precio: 1250 },
+  { id: 'minigun', arma: 'minigun', rareza: 'legendary', precio: 1600 },
+  { id: 'julen', arma: 'julen', rareza: 'mythic', precio: 2600 },
 ];
