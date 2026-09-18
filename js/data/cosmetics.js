@@ -390,7 +390,7 @@ export const SKINS = [
     head: { tipo: 'mono', color: '#6b5a10', color2: '#ffe14f' },
   }),
   makeSkin({
-    id: 'buzo', name: 'Buzo Despistado', rarity: 'uncommon', price: 420,
+    id: 'buzo_torpe', name: 'Buzo Despistado', rarity: 'uncommon', price: 420,
     desc: 'Se metio al lago a por un pez y ya no se quito el traje.',
     palette: {
       jacket: '#2f9fb8', jacketDark: '#1f7086', pants: '#1a4a5a',
@@ -504,6 +504,302 @@ export const SKINS = [
       shoulders: '#ffd23f', cape: { color: '#101733', color2: '#ffd23f' }, glow: '#ffd23f',
     },
     head: { tipo: 'corona', color: '#1b2440', color2: '#ffd23f' },
+  }),
+
+  /* ---------- Oficios ---------- */
+  makeSkin({
+    id: 'medica', name: 'Doctora Vendaje', rarity: 'uncommon', price: 360,
+    desc: 'Cura primero y pregunta despues como te lo has hecho.',
+    palette: {
+      jacket: '#f2f6fa', jacketDark: '#cdd6e0', pants: '#2f6f7a',
+      backpack: '#e05a5a', glove: '#bfe0e8', boots: '#1f4f58',
+    },
+    style: { pattern: 'panel', emblem: 'cruz', trim: '#e05a5a' },
+    head: { tipo: 'coleta', color: '#5b3a1f', color2: '#f2f6fa' },
+  }),
+  makeSkin({
+    id: 'futbolista', name: 'Crack del Cesped', rarity: 'rare', price: 720,
+    desc: 'Mete gol en la final y luego baila en el centro del campo.',
+    palette: {
+      jacket: '#1e8f4e', jacketDark: '#146637', pants: '#f2f6fa',
+      backpack: '#0f4d2b', glove: '#ffffff', boots: '#ffd23f',
+    },
+    style: { pattern: 'rayas', emblem: 'estrella', trim: '#ffffff' },
+    head: { tipo: 'cresta', color: '#2b1c10', color2: '#ffd23f' },
+  }),
+  makeSkin({
+    id: 'arcade', name: 'Piloto Arcade', rarity: 'rare', price: 900,
+    desc: 'Se escapo de una maquina recreativa y no piensa volver.',
+    palette: {
+      jacket: '#2b2f6b', jacketDark: '#1b1e4a', pants: '#1a1c33',
+      backpack: '#4ff0d8', glove: '#3a3f80', boots: '#12142a',
+    },
+    style: { pattern: 'circuito', emblem: 'rayo', trim: '#4ff0d8', shoulders: '#3a3f80' },
+    head: { tipo: 'casco', color: '#2b2f6b', color2: '#4ff0d8' },
+  }),
+
+  /* ---------- Bichos ---------- */
+  makeSkin({
+    id: 'yeti', name: 'Yeti Nevado', rarity: 'epic', price: 1450,
+    desc: 'Bajo de la montana porque alli ya no quedaba nadie.',
+    palette: {
+      jacket: '#dff4ff', jacketDark: '#b6d8ea', pants: '#a8cde0',
+      backpack: '#7fb8d6', glove: '#c8e6f4', boots: '#6ba4c0',
+      skin: '#eaf7ff', skinShade: '#c9dfe9',
+    },
+    style: { pattern: 'pelaje', emblem: 'hueso', trim: '#7fb8d6' },
+    head: { tipo: 'cuernos', color: '#dff4ff', color2: '#7fb8d6' },
+  }),
+
+  /* ---------- Misterio ---------- */
+  makeSkin({
+    id: 'mago', name: 'Mago Chispas', rarity: 'epic', price: 1400,
+    desc: 'Dice que sus trucos son magia, pero son punteria.',
+    palette: {
+      jacket: '#4a2f8f', jacketDark: '#33206a', pants: '#2e1b5e',
+      backpack: '#ffd23f', glove: '#6a46c8', boots: '#1f1240',
+    },
+    style: {
+      pattern: 'estrellado', emblem: 'luna', trim: '#ffd23f',
+      cape: { color: '#2e1b5e', color2: '#6a46c8' },
+    },
+    head: { tipo: 'sombrero', color: '#4a2f8f', color2: '#ffd23f' },
+  }),
+
+  /* ---------- Guerreros ---------- */
+  makeSkin({
+    id: 'brasa', name: 'Ninja Brasa', rarity: 'legendary', price: 1750,
+    desc: 'Entrena entre volcanes y por eso nada le quema.',
+    palette: {
+      jacket: '#2a1c22', jacketDark: '#160e12', pants: '#1c1218',
+      backpack: '#ff7a2f', glove: '#3a2630', boots: '#120b0f',
+    },
+    style: { pattern: 'chevron', emblem: 'llama', trim: '#ff7a2f', glow: '#ff7a2f' },
+    head: { tipo: 'capucha', color: '#2a1c22', color2: '#ff7a2f' },
+  }),
+
+  /* ---------- Miticas ---------- */
+  makeSkin({
+    id: 'galactico', name: 'Rey Galactico', rarity: 'mythic', price: 2700,
+    desc: 'Manda en tres planetas y quiere ganar tambien en este.',
+    palette: {
+      jacket: '#1f2a6b', jacketDark: '#131a49', pants: '#161d42',
+      backpack: '#8ad8ff', glove: '#2b3a8f', boots: '#0e1230',
+    },
+    style: {
+      pattern: 'estrellado', emblem: 'corona', trim: '#8ad8ff', glow: '#8ad8ff',
+      shoulders: '#2b3a8f', cape: { color: '#131a49', color2: '#4a6ff0' },
+    },
+    head: { tipo: 'corona', color: '#ffd23f', color2: '#8ad8ff' },
+  }),
+  makeSkin({
+    id: 'diablillo', name: 'Diablillo Travieso', rarity: 'mythic', price: 2900,
+    desc: 'No es malo del todo: solo le encanta ganar haciendo trampas.',
+    palette: {
+      jacket: '#c0392b', jacketDark: '#8a2118', pants: '#2b1418',
+      backpack: '#ff5a3c', glove: '#8a2118', boots: '#1c0d10',
+      skin: '#f0a090', skinShade: '#c97a6a',
+    },
+    style: {
+      pattern: 'escamas', emblem: 'calavera', trim: '#ff9a3c', glow: '#ff5a3c',
+      shoulders: '#8a2118', cape: { color: '#5c1410', color2: '#c0392b' },
+    },
+    head: { tipo: 'cuernos', color: '#c0392b', color2: '#ffd23f' },
+  }),
+
+  /* =============================================================
+     TANDA NUEVA 2
+     -------------------------------------------------------------
+     Nueve mas. La idea sigue siendo la misma: que ninguna se
+     parezca a otra de un vistazo. Cada una tiene su cabeza, su
+     patron y su emblema, y las mas caras llevan capa y aura.
+     ============================================================= */
+
+  /* ---------- Oficios ---------- */
+  makeSkin({
+    id: 'minero', name: 'Minero de Cristal', rarity: 'rare', price: 640,
+    desc: 'Baja a por piedra y sube con media montana.',
+    palette: {
+      jacket: '#5a6b7a', jacketDark: '#3c4a56', pants: '#2f3742',
+      backpack: '#7fe0f0', glove: '#8a6a3a', boots: '#4a3a22',
+    },
+    style: { pattern: 'panel', emblem: 'engranaje', trim: '#7fe0f0', shoulders: '#8a6a3a' },
+    head: { tipo: 'casco', color: '#ffb03a', color2: '#fff0c8' },
+  }),
+  makeSkin({
+    id: 'detective', name: 'Detective Niebla', rarity: 'rare', price: 700,
+    desc: 'Sabe donde estas antes de que aterrices.',
+    palette: {
+      jacket: '#7a6a52', jacketDark: '#57492f', pants: '#3a3226',
+      backpack: '#2e2a22', glove: '#4a4034', boots: '#26221a',
+    },
+    style: { pattern: 'liso', emblem: 'ojo', trim: '#d8cbae', cape: { color: '#57492f', color2: '#d8cbae' } },
+    head: { tipo: 'sombrero', color: '#4a4034', color2: '#7a6a52' },
+  }),
+
+  /* ---------- Bichos ---------- */
+  makeSkin({
+    id: 'pingui', name: 'Pingui Helado', rarity: 'uncommon', price: 400,
+    desc: 'Se desliza por las rampas de barriga. Siempre.',
+    palette: {
+      jacket: '#232a38', jacketDark: '#151a26', pants: '#151a26',
+      backpack: '#ffa62b', glove: '#ffa62b', boots: '#ffa62b',
+      skin: '#f4f7ff', skinShade: '#d2d9e8',
+    },
+    style: { pattern: 'liso', emblem: 'pez', trim: '#f4f7ff' },
+    head: { tipo: 'mono', color: '#151a26', color2: '#f4f7ff' },
+  }),
+  makeSkin({
+    id: 'lobo', name: 'Lobo de Escarcha', rarity: 'epic', price: 1250,
+    desc: 'Aulla cuando queda el circulo final. Da un poco de miedo.',
+    palette: {
+      jacket: '#8e9db0', jacketDark: '#6a7789', pants: '#3f4858',
+      backpack: '#cfe0f0', glove: '#6a7789', boots: '#2e3542',
+    },
+    style: { pattern: 'pelaje', emblem: 'luna', trim: '#dff0ff', shoulders: '#cfe0f0', glow: '#bfe0ff' },
+    head: { tipo: 'orejas', color: '#8e9db0', color2: '#dff0ff' },
+  }),
+
+  /* ---------- Guerreros ---------- */
+  makeSkin({
+    id: 'arquera', name: 'Arquera del Pinar', rarity: 'rare', price: 720,
+    desc: 'No falla. Dice que es suerte, pero no lo es.',
+    palette: {
+      jacket: '#3f6b42', jacketDark: '#27482a', pants: '#4a3a26',
+      backpack: '#8a6a3a', glove: '#6b5230', boots: '#3a2c1c',
+    },
+    style: { pattern: 'chevron', emblem: 'rombo', trim: '#b9d98a' },
+    head: { tipo: 'capucha', color: '#3f6b42', color2: '#b9d98a' },
+  }),
+  makeSkin({
+    id: 'cyborg', name: 'Ciber Guardia', rarity: 'epic', price: 1550,
+    desc: 'Mitad persona, mitad taller. Se enchufa entre partidas.',
+    palette: {
+      jacket: '#2c3a46', jacketDark: '#1b252e', pants: '#1b252e',
+      backpack: '#4fd6c8', glove: '#39505e', boots: '#121a20',
+      accent: 'rgba(79, 214, 200, 0.8)',
+    },
+    style: { pattern: 'circuito', emblem: 'engranaje', trim: '#4fd6c8', shoulders: '#39505e', glow: '#4fd6c8' },
+    head: { tipo: 'casco', color: '#2c3a46', color2: '#4fd6c8' },
+  }),
+  makeSkin({
+    id: 'faraon', name: 'Faraon Dorado', rarity: 'legendary', price: 2000,
+    desc: 'Llevaba tres mil anos esperando una tormenta asi.',
+    palette: {
+      jacket: '#1e2a44', jacketDark: '#121a2c', pants: '#e0c060',
+      backpack: '#e0c060', glove: '#2b3a5c', boots: '#c9a63f',
+      accent: 'rgba(255, 220, 120, 0.8)',
+    },
+    style: {
+      pattern: 'panel', emblem: 'ojo', trim: '#ffd980',
+      shoulders: '#e0c060', cape: { color: '#121a2c', color2: '#e0c060' }, glow: '#ffd980',
+    },
+    head: { tipo: 'corona', color: '#1e2a44', color2: '#e0c060' },
+  }),
+
+  /* ---------- Raras de verdad ---------- */
+  makeSkin({
+    id: 'dj', name: 'DJ Neon', rarity: 'epic', price: 1500,
+    desc: 'Pincha en la fiesta del autobus y no se calla nunca.',
+    palette: {
+      jacket: '#1a1030', jacketDark: '#0f0920', pants: '#2a1a4a',
+      backpack: '#ff3bd0', glove: '#3a2a5a', boots: '#150e2a',
+      accent: 'rgba(255, 59, 208, 0.8)',
+    },
+    style: { pattern: 'circuito', emblem: 'rayo', trim: '#3bf0ff', shoulders: '#ff3bd0', glow: '#ff3bd0' },
+    head: { tipo: 'cresta', color: '#3bf0ff', color2: '#ff3bd0' },
+  }),
+  makeSkin({
+    id: 'fenix', name: 'Fenix Eterno', rarity: 'mythic', price: 3000,
+    desc: 'Cada partida vuelve a nacer. Esta vez con mas ganas.',
+    palette: {
+      jacket: '#ff6a1f', jacketDark: '#c23f0c', pants: '#7a2a0c',
+      backpack: '#ffd23f', glove: '#ff9a3a', boots: '#5c1c06',
+      accent: 'rgba(255, 210, 63, 0.85)',
+      skin: '#ffe0c0', skinShade: '#e0b894',
+    },
+    style: {
+      pattern: 'escamas', emblem: 'llama', trim: '#ffd980',
+      shoulders: '#ffd23f', cape: { color: '#c23f0c', color2: '#ffd23f' }, glow: '#ff9a3a',
+    },
+    head: { tipo: 'cuernos', color: '#ff6a1f', color2: '#ffd23f' },
+  }),
+  /* ---------- Y las que faltaban: bichos, oficios y sustos ---------- */
+  makeSkin({
+    id: 'bombero', name: 'Bombero Chispas', rarity: 'uncommon', price: 380,
+    desc: 'Entra en los sitios que arden, no sale de los que no.',
+    palette: {
+      jacket: '#c8352c', jacketDark: '#8f2018', pants: '#2b2f3a',
+      backpack: '#ffd23f', glove: '#f0e6d2', boots: '#1a1d26',
+    },
+    style: { pattern: 'rayas', emblem: 'llama', trim: '#ffd23f', shoulders: '#ffd23f' },
+    head: { tipo: 'casco', color: '#e8b21f', color2: '#ffe9a8' },
+  }),
+  makeSkin({
+    id: 'chef', name: 'Chef de Cinco Estrellas', rarity: 'uncommon', price: 420,
+    desc: 'Cocina para veinte y luego se los come a todos.',
+    palette: {
+      jacket: '#f6f2e8', jacketDark: '#cfc9ba', pants: '#3a3f4c',
+      backpack: '#c8352c', glove: '#f6f2e8', boots: '#23262f',
+    },
+    style: { pattern: 'panel', emblem: 'estrella', trim: '#c8352c' },
+    head: { tipo: 'sombrero', color: '#f6f2e8', color2: '#dcd6c6' },
+  }),
+  makeSkin({
+    id: 'abeja', name: 'Abeja Zumbona', rarity: 'uncommon', price: 360,
+    desc: 'Pequena, rapida y con muy malas pulgas.',
+    palette: {
+      jacket: '#ffd23f', jacketDark: '#c9a015', pants: '#23242c',
+      backpack: '#23242c', glove: '#ffe89a', boots: '#23242c',
+    },
+    style: { pattern: 'rayas', emblem: 'corazon', trim: '#23242c' },
+    head: { tipo: 'orejas', color: '#23242c', color2: '#ffd23f' },
+  }),
+  makeSkin({
+    id: 'tiburon', name: 'Tiburon de la Cala', rarity: 'rare', price: 760,
+    desc: 'Nunca deja de moverse. Ni en la sala de espera.',
+    palette: {
+      jacket: '#4a6f8c', jacketDark: '#2f4a62', pants: '#22384a',
+      backpack: '#e8eef2', glove: '#e8eef2', boots: '#1a2c3a',
+    },
+    style: { pattern: 'escamas', emblem: 'pez', trim: '#cfe6f2', shoulders: '#2f4a62' },
+    head: { tipo: 'mascara', color: '#4a6f8c', color2: '#e8eef2' },
+  }),
+  makeSkin({
+    id: 'samurai', name: 'Samurai Carmesi', rarity: 'epic', price: 1400,
+    desc: 'Guarda el filo hasta el ultimo momento.',
+    palette: {
+      jacket: '#a8232f', jacketDark: '#6f1119', pants: '#1f222c',
+      backpack: '#1f222c', glove: '#2b2f3a', boots: '#15181f',
+    },
+    style: {
+      pattern: 'escamas', emblem: 'llama', trim: '#f0d08a',
+      shoulders: '#1f222c', cape: { color: '#6f1119', color2: '#f0d08a' },
+    },
+    head: { tipo: 'cuernos', color: '#1f222c', color2: '#f0d08a' },
+  }),
+  makeSkin({
+    id: 'momia', name: 'Momia Vendada', rarity: 'rare', price: 780,
+    desc: 'Se le sale una venda cada vez que corre.',
+    palette: {
+      jacket: '#ddd4bd', jacketDark: '#b5aa8f', pants: '#c7bda4',
+      backpack: '#6b5a3a', glove: '#ddd4bd', boots: '#8a7a5a',
+      skin: '#cfc6ad', skinShade: '#a89e85',
+    },
+    style: { pattern: 'rayas', emblem: 'hueso', trim: '#8a7a5a' },
+    head: { tipo: 'bandana', color: '#ddd4bd', color2: '#8a7a5a' },
+  }),
+  makeSkin({
+    id: 'fantasma', name: 'Fantasma Travieso', rarity: 'epic', price: 1200,
+    desc: 'Aparece detras de ti y se rie. Lo hace mucho.',
+    palette: {
+      jacket: '#cfe2ef', jacketDark: '#a6bccd', pants: '#8fa6ba',
+      backpack: '#e8f4ff', glove: '#e8f4ff', boots: '#7a8fa3',
+      skin: '#eef7ff', skinShade: '#c8d8e6',
+      accent: 'rgba(255,255,255,0.7)',
+    },
+    style: { pattern: 'lunares', emblem: 'calavera', trim: '#ffffff', glow: '#cfe2ef' },
+    head: { tipo: 'capucha', color: '#cfe2ef', color2: '#ffffff' },
   }),
 ];
 
