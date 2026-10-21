@@ -26,6 +26,51 @@ import {
 /** Proporciones base pensadas para una altura de pie de 58 px. */
 const BASE_HEIGHT = 58;
 
+/**
+ * PROPORCIONES DE LA CABEZA
+ * ---------------------------------------------------------------
+ * La cabeza se dibujaba a tamano "muneco": ocupaba casi el 40% del alto
+ * del personaje, que es lo que hacia que pareciera un bebe cabezon. En
+ * los sprites planos de verdad la cabeza es mas o menos una cuarta parte.
+ *
+ * En vez de volver a medir el pelo, el casco, la corona y los cuernos uno
+ * por uno, TODA la cabeza se dibuja con sus medidas de siempre y luego se
+ * encoge con un escalado. Asi ningun peinado se descoloca.
+ *
+ *   HEAD_SCALE  cuanto se encoge (0.62 = cabeza de una cuarta parte)
+ *   HEAD_LIFT   cuanto sube, para que entre un CUELLO a la vista en vez
+ *               de que la barbilla se hunda en el pecho
+ */
+const HEAD_SCALE = 0.62;
+const HEAD_LIFT = 5;
+
+/**
+ * PROPORCIONES DEL CUERPO
+ * ---------------------------------------------------------------
+ * Con la cabeza mas pequena, el cuerpo de antes se quedaba corto: los
+ * hombros subian hasta la barbilla y no habia cuello. El reparto nuevo
+ * es el de los sprites planos: cabeza 1/4, torso corto y PIERNAS LARGAS
+ * (casi la mitad del alto).
+ *
+ *   HIP_LIFT     la cadera sube; las perneras se alargan lo mismo en
+ *                drawLeg, asi que los pies siguen pisando igual
+ *   TORSO_H      alto del torso (antes 25: demasiado para el cuello)
+ *   SHOULDER_OFF cuanto cae el hombro por debajo de la cadera levantada
+ */
+const HIP_LIFT = 4;
+const TORSO_H = 18;
+const SHOULDER_OFF = 15;
+
+/**
+ * Cuanto POR DEBAJO del hombro se sujeta el arma. Al hombro pelado el
+ * canon queda pegado a la barbilla; a la altura del pecho se ve la cara
+ * y queda como en los sprites planos.
+ *
+ * OJO: este numero tiene que cuadrar con player.shoulderOffset (de ahi
+ * salen las balas). Si se cambia uno, se cambia el otro.
+ */
+const HOLD_DROP = 3;
+
 /** Skin de reserva si no se pasa ninguna (la gratuita). */
 const DEFAULT_SKIN = SKINS[0];
 
@@ -293,9 +338,10 @@ function drawCharacter(ctx, st, skin) {
   const S = { ...STYLE_DEFAULTS, ...(skin.style || {}) };
 
   const hipX = 0;
-  const hipY = st.hipY + st.bob;
-  const shoulderY = hipY - (st.crouch ? 15 : 20);
-  const torsoH = st.crouch ? 20 : 25;
+  // Agachado NO se levanta la cadera: la pose ya viene encogida.
+  const hipY = st.hipY + st.bob - (st.crouch ? 0 : HIP_LIFT);
+  const shoulderY = hipY - (st.crouch ? 13 : SHOULDER_OFF);
+  const torsoH = st.crouch ? 16 : TORSO_H;
 
   // --- Aura (solo las skins mas raras la llevan) ---
   if (S.glow) {
@@ -316,29 +362,38 @@ function drawCharacter(ctx, st, skin) {
 
   // --- Capa TRASERA del cuerpo (tonos oscurecidos, dan profundidad) ---
   drawLeg(ctx, hipX - 2, hipY, st.legBack, st.kneeBack, P.pantsDark, shadeBoot(P.boots), st.crouch, true);
-  drawArm(ctx, hipX - 2, shoulderY, st.armBack, st.elbowBack, P.jacketDark, P, st.crouch, S, true);
+
+  // Con un arma en la mano, el brazo de atras NO cuelga: sujeta el arma
+  // por delante, que es como se coge un fusil de verdad (y como salen en
+  // los sprites de referencia). Sin arma, cuelga y acompana al paso.
+  if (st.held && st.held.kind === 'weapon') {
+    drawSupportArm(ctx, st, hipX - 2, shoulderY + HOLD_DROP, P);
+  } else {
+    drawArm(ctx, hipX - 2, shoulderY, st.armBack, st.elbowBack, P.jacketDark, P, st.crouch, S, true);
+  }
 
   // --- Mochila (detras del torso) ---
   ctx.save();
   ctx.translate(0, hipY);
   ctx.rotate(st.lean);
-  fillRoundRect(ctx, -16, -23, 12, 21, 5, P.backpack);
+  // (medidas atadas al torso nuevo, mas corto)
+  fillRoundRect(ctx, -15.5, -18, 11.5, 17, 5, P.backpack);
   // Tapa y correa, para que no sea un ladrillo
-  fillRoundRect(ctx, -16, -23, 12, 7, 4, 'rgba(255,255,255,0.18)');
-  fillRoundRect(ctx, -16, -13, 12, 3.4, 1.6, 'rgba(0,0,0,0.28)');
+  fillRoundRect(ctx, -15.5, -18, 11.5, 6, 4, 'rgba(255,255,255,0.18)');
+  fillRoundRect(ctx, -15.5, -9.5, 11.5, 3, 1.5, 'rgba(0,0,0,0.28)');
   ctx.restore();
 
   // --- Torso ---
   drawTorso(ctx, hipX, hipY, st, P, S, torsoH);
 
-  // --- Cabeza ---
-  drawHead(ctx, hipX, st.headY + st.bob, st.lean, skin);
+  // --- Cabeza (sube un poco: ver HEAD_LIFT) ---
+  drawHead(ctx, hipX, st.headY + st.bob - HEAD_LIFT, st.lean, skin);
 
   // --- Capa DELANTERA ---
   drawLeg(ctx, hipX + 2, hipY, st.legFront, st.kneeFront, P.pants, P.boots, st.crouch, false);
 
   if (st.held) {
-    drawHoldingArm(ctx, st, hipX + 2, shoulderY, P);
+    drawHoldingArm(ctx, st, hipX + 2, shoulderY + HOLD_DROP, P);
   } else {
     drawArm(ctx, hipX + 2, shoulderY, st.armFront, st.elbowFront, P.jacket, P, st.crouch, S, false);
   }
@@ -497,9 +552,9 @@ function drawTorso(ctx, hipX, hipY, st, P, S, torsoH) {
   // emblema centrado queda tapado en cuanto el personaje se mueve.
   if (S.emblem) {
     ctx.save();
-    ctx.translate(-6.5, 0);
-    ctx.scale(1.05, 1.05);
-    drawEmblem(ctx, S.emblem, S.trim || P.accent, (top + 9) / 1.05);
+    ctx.translate(-6, 0);
+    ctx.scale(0.85, 0.85);
+    drawEmblem(ctx, S.emblem, S.trim || P.accent, (top + 8) / 0.85);
     ctx.restore();
   }
 
@@ -558,6 +613,21 @@ function drawHoldingArm(ctx, st, shoulderX, shoulderY, P) {
   }
 }
 
+/**
+ * BRAZO DE APOYO: el de atras cuando se lleva un arma a dos manos.
+ * Va al mismo sitio que el que apunta pero un poco mas corto y algo mas
+ * abajo, para que la mano asome por debajo del canon y no se pierda
+ * detras del arma.
+ */
+function drawSupportArm(ctx, st, shoulderX, shoulderY, P) {
+  const aim = st.aim + 0.30;
+  const shoulderAngle = Math.PI / 2 - aim;
+  // Colores del lado de atras (mas oscuros): dan profundidad.
+  const atrasP = { ...P, skin: P.skinShade };
+  drawArm(ctx, shoulderX, shoulderY, shoulderAngle, 0, P.jacketDark, atrasP,
+    st.crouch, null, true, 0.78);
+}
+
 /** La bota trasera va un poco mas oscura que la delantera. */
 function shadeBoot(color) {
   return color === '#2a2f45' ? '#1f2338' : color;
@@ -574,8 +644,14 @@ function drawHead(ctx, x, y, lean, skin) {
   ctx.translate(x, y);
   ctx.rotate(lean * 0.5);
 
-  // Cuello
-  fillRoundRect(ctx, -4, 4, 8, 8, 3, P.skinShade);
+  // CUELLO: a tamano real (no se encoge con la cabeza), de la barbilla
+  // al cuello de la chaqueta. Es lo que separa cabeza y torso.
+  fillRoundRect(ctx, -3.6, 4, 7.2, 11, 3, P.skinShade);
+  // Sombra donde la barbilla tapa el cuello
+  fillRoundRect(ctx, -3.6, 4, 7.2, 3.4, 1.6, 'rgba(0,0,0,0.22)');
+
+  // A partir de aqui, la cabeza con sus medidas de siempre, encogida.
+  ctx.scale(HEAD_SCALE, HEAD_SCALE);
 
   // Melenas, capuchas y nucas van DETRAS del craneo (profundidad),
   // asi que se dibujan antes de la cara.
@@ -601,32 +677,65 @@ function drawHead(ctx, x, y, lean, skin) {
   ctx.restore();
 }
 
-/** Ojo, ceja y boca. El sprite mira siempre hacia +X (se voltea fuera). */
+/**
+ * Nariz, ojo, ceja y boca. El sprite mira siempre hacia +X (se voltea fuera).
+ *
+ * La cara de antes era un ojo enorme en una bola: de perfil no se le veia
+ * ni la nariz. Ahora es un PERFIL de verdad, como en los sprites planos:
+ * la nariz sobresale del craneo, el ojo es mas pequeno y la ceja hace de
+ * flequillo encima.
+ */
 function drawFace(ctx, P, H) {
+  // --- NARIZ: sale por delante del craneo, con la punta redondeada ---
+  ctx.fillStyle = P.skin;
+  ctx.beginPath();
+  ctx.moveTo(8.2, -2.2);
+  ctx.quadraticCurveTo(13.6, 0.2, 12.8, 1.9);
+  ctx.quadraticCurveTo(12.2, 3.2, 8.2, 3.4);
+  ctx.closePath();
+  ctx.fill();
+  // Punta algo mas rosada, para que se despegue de la mejilla
+  ctx.fillStyle = 'rgba(214, 108, 84, 0.40)';
+  ctx.beginPath();
+  ctx.moveTo(11, 0.1);
+  ctx.quadraticCurveTo(13.6, 0.6, 12.6, 2);
+  ctx.quadraticCurveTo(12, 2.9, 10.4, 2.7);
+  ctx.closePath();
+  ctx.fill();
+
+  // --- OJO: mas pequeno y un poco mas alto que antes ---
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.ellipse(5, -1, 3.1, 3.6, 0, 0, Math.PI * 2);
+  ctx.ellipse(5.4, -2, 2.6, 3.1, 0, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = P.eye;
   ctx.beginPath();
-  ctx.arc(6.2, -1, 1.7, 0, Math.PI * 2);
+  ctx.arc(6.4, -2, 1.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Ceja (del color del pelo)
+  // --- CEJA / flequillo (del color del pelo), gruesa y pegada al ojo ---
   ctx.strokeStyle = H.color;
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 2.4;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(2.5, -6);
-  ctx.lineTo(8, -5.2);
+  ctx.moveTo(2.4, -6.6);
+  ctx.lineTo(8.6, -5.6);
   ctx.stroke();
 
-  // Boca
-  ctx.strokeStyle = 'rgba(120, 70, 50, 0.9)';
-  ctx.lineWidth = 1.4;
+  // --- BOCA: una raya corta bajo la nariz ---
+  ctx.strokeStyle = 'rgba(110, 62, 46, 0.85)';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(5.5, 4.5, 2.6, 0.15, Math.PI * 0.85);
+  ctx.moveTo(6.2, 5.4);
+  ctx.lineTo(9.8, 4.9);
   ctx.stroke();
+
+  // --- OREJA, por detras del ojo ---
+  ctx.fillStyle = P.skinShade;
+  ctx.beginPath();
+  ctx.ellipse(-1.4, 1.2, 1.9, 2.4, 0, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**
@@ -1022,8 +1131,10 @@ function drawHeadwearFront(ctx, P, H) {
  * `hipAngle` y `kneeAngle` en radianes; 0 = recta hacia abajo.
  */
 function drawLeg(ctx, x, y, hipAngle, kneeAngle, colorLeg, colorBoot, crouch, atras) {
-  const thigh = crouch ? 11 : 13;
-  const shin = crouch ? 10 : 13;
+  // Perneras largas: la cadera sube HIP_LIFT y el muslo y la espinilla
+  // se alargan la mitad cada uno, asi que el pie cae donde caia antes.
+  const thigh = crouch ? 11 : 15;
+  const shin = crouch ? 10 : 15;
 
   const kx = x + Math.sin(hipAngle) * thigh;
   const ky = y + Math.cos(hipAngle) * thigh;
@@ -1039,7 +1150,7 @@ function drawLeg(ctx, x, y, hipAngle, kneeAngle, colorLeg, colorBoot, crouch, at
   // ese aire de dibujo, en vez de parecer una mancha de color.
   if (!atras) {
     ctx.strokeStyle = 'rgba(0,0,0,0.32)';
-    ctx.lineWidth = 11.5;
+    ctx.lineWidth = 10.2;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(kx, ky);
@@ -1048,7 +1159,7 @@ function drawLeg(ctx, x, y, hipAngle, kneeAngle, colorLeg, colorBoot, crouch, at
   }
 
   ctx.strokeStyle = colorLeg;
-  ctx.lineWidth = 9;
+  ctx.lineWidth = 8;
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(kx, ky);
@@ -1071,31 +1182,36 @@ function drawLeg(ctx, x, y, hipAngle, kneeAngle, colorLeg, colorBoot, crouch, at
   ctx.arc(kx, ky, 3.2, 0, Math.PI * 2);
   ctx.fill();
 
-  // Cana de la bota
+  // --- ZAPATILLA ---
+  // Antes era una elipse del mismo color que la pernera: con las skins
+  // oscuras, pierna y pie eran la misma mancha negra. Ahora es una
+  // zapatilla gorda, con puntera y SUELA CLARA, que es lo que la separa
+  // de la pernera y del suelo.
+  // Tobillo
   ctx.strokeStyle = colorBoot;
-  ctx.lineWidth = 9.5;
+  ctx.lineWidth = 8;
   ctx.beginPath();
-  ctx.moveTo(fx, fy - 4);
-  ctx.lineTo(fx, fy);
+  ctx.moveTo(fx, fy - 4.5);
+  ctx.lineTo(fx, fy - 1);
   ctx.stroke();
 
-  // Pie
-  ctx.fillStyle = colorBoot;
-  ctx.beginPath();
-  ctx.ellipse(fx + 2.5, fy + 0.5, 7, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Suela
-  ctx.fillStyle = 'rgba(0,0,0,0.45)';
-  ctx.beginPath();
-  ctx.ellipse(fx + 2.5, fy + 3, 7, 1.8, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Cuerpo de la zapatilla, del talon a la punta
+  fillRoundRect(ctx, fx - 4.6, fy - 3.4, 12.4, 6.4, 3, colorBoot);
+  // Puntera, un punto mas clara
+  fillRoundRect(ctx, fx + 2.6, fy - 3, 5, 5.2, 2.5, 'rgba(255,255,255,0.20)');
+  // Suela: va DENTRO de la zapatilla (si sobresale parece que flota) y
+  // fina, que si no parece que el personaje va subido a dos tablas.
+  fillRoundRect(ctx, fx - 4, fy + 1, 11.2, 2, 1,
+    atras ? 'rgba(188,198,216,0.55)' : 'rgba(226,232,243,0.92)');
 }
 
 /** Brazo de 2 segmentos (manga + antebrazo) + guante. */
-function drawArm(ctx, x, y, shoulderAngle, elbowAngle, colorSleeve, palette, crouch, style, atras) {
-  const upper = crouch ? 10 : 12;
-  const fore = crouch ? 9 : 11;
+function drawArm(ctx, x, y, shoulderAngle, elbowAngle, colorSleeve, palette, crouch, style, atras, largo = 1) {
+  // Brazos finos: con el grosor de antes, un brazo era media anchura del
+  // torso y lo tapaba entero al cruzarlo por delante.
+  // `largo` acorta el brazo entero (lo usa el brazo de apoyo del arma).
+  const upper = (crouch ? 9.5 : 11) * largo;
+  const fore = (crouch ? 8.5 : 10) * largo;
 
   const ex = x + Math.sin(shoulderAngle) * upper;
   const ey = y + Math.cos(shoulderAngle) * upper;
@@ -1109,7 +1225,7 @@ function drawArm(ctx, x, y, shoulderAngle, elbowAngle, colorSleeve, palette, cro
   // Contorno
   if (!atras) {
     ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    ctx.lineWidth = 9.2;
+    ctx.lineWidth = 8;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(ex, ey);
@@ -1119,7 +1235,7 @@ function drawArm(ctx, x, y, shoulderAngle, elbowAngle, colorSleeve, palette, cro
 
   // Manga
   ctx.strokeStyle = colorSleeve;
-  ctx.lineWidth = 7.5;
+  ctx.lineWidth = 6.4;
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(ex, ey);
@@ -1127,7 +1243,7 @@ function drawArm(ctx, x, y, shoulderAngle, elbowAngle, colorSleeve, palette, cro
 
   // Antebrazo (piel)
   ctx.strokeStyle = palette.skin;
-  ctx.lineWidth = 6.5;
+  ctx.lineWidth = 5.6;
   ctx.beginPath();
   ctx.moveTo(ex, ey);
   ctx.lineTo(hx, hy);
@@ -1147,7 +1263,7 @@ function drawArm(ctx, x, y, shoulderAngle, elbowAngle, colorSleeve, palette, cro
   // Mano (guante) con nudillos
   ctx.fillStyle = palette.glove;
   ctx.beginPath();
-  ctx.arc(hx, hy, 4.2, 0, Math.PI * 2);
+  ctx.arc(hx, hy, 3.6, 0, Math.PI * 2);
   ctx.fill();
 
   if (!atras) {

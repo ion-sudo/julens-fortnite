@@ -154,9 +154,14 @@ export class Player {
      De ahi sale el arma (y por tanto los disparos).
      ============================================================= */
 
-  /** Altura del hombro respecto a los pies (coincide con el dibujo). */
+  /**
+   * Altura a la que se sujeta el arma respecto a los pies.
+   * TIENE QUE COINCIDIR CON EL DIBUJO (ver HOLD_DROP en
+   * entities/playerSprite.js): si no, las balas salen por encima o por
+   * debajo del canon.
+   */
   get shoulderOffset() {
-    return this.crouching ? 29 : 42;
+    return this.crouching ? 25 : 38;
   }
 
   get handX() { return this.x + this.w / 2 + this.facing * 3; }
