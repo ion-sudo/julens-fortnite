@@ -42,7 +42,7 @@ const BASE_HEIGHT = 58;
  *               de que la barbilla se hunda en el pecho
  */
 const HEAD_SCALE = 0.62;
-const HEAD_LIFT = 5;
+const HEAD_LIFT = 4;
 
 /**
  * PROPORCIONES DEL CUERPO
@@ -98,6 +98,19 @@ export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) 
     pose.aim = player.facing === 1 ? player.aimAngle : Math.PI - player.aimAngle;
     pose.action = player.action;
     pose.actionTimer = player.actionTimer;
+
+    // POSTURA DE TIRO: con un arma en la mano el cuerpo se echa hacia
+    // delante y, parado, abre las piernas en guardia. De pie y tieso
+    // parecia que llevaba el arma de paseo.
+    if (gear.item.kind === 'weapon' && player.onGround && !player.crouching) {
+      pose.lean -= 0.08;
+      if (player.animState === 'idle') {
+        pose.legFront = 0.26; pose.legBack = -0.22;
+        pose.kneeFront = 0.12; pose.kneeBack = 0.10;
+      }
+      // El retroceso del disparo echa el cuerpo atras un instante.
+      pose.lean += Math.min(pose.recoil, 6) * 0.012;
+    }
   }
 
   ctx.save();
@@ -507,19 +520,17 @@ function drawTorso(ctx, hipX, hipY, st, P, S, torsoH) {
   ctx.fillStyle = P.jacket;
   ctx.fillRect(-11, top - 1, 22, torsoH + 8);
 
-  // Luz de arriba y sombra abajo
-  const luz = ctx.createLinearGradient(0, top, 0, bot);
-  luz.addColorStop(0, 'rgba(255,255,255,0.22)');
-  luz.addColorStop(0.45, 'rgba(255,255,255,0)');
-  luz.addColorStop(1, 'rgba(0,0,0,0.25)');
-  ctx.fillStyle = luz;
-  ctx.fillRect(-11, top - 1, 22, torsoH + 8);
-
-  // Sombra del lado de atras
+  // SOMBREADO PLANO de dos tonos: en los sprites planos no hay
+  // degradados, hay dos colores a cuchillo. La mitad de atras va en el
+  // tono oscuro de la chaqueta y el borde de delante lleva una franja de
+  // luz. Asi se le ve el volumen aunque el personaje sea diminuto.
   ctx.fillStyle = P.jacketDark;
-  ctx.globalAlpha = 0.55;
-  ctx.fillRect(-11, top - 1, 5, torsoH + 8);
-  ctx.globalAlpha = 1;
+  ctx.fillRect(-11, top - 1, 7.5, torsoH + 8);
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.fillRect(6.2, top - 1, 4.8, torsoH + 8);
+  // Linea de luz justo en el hombro
+  ctx.fillStyle = 'rgba(255,255,255,0.14)';
+  ctx.fillRect(-3.5, top - 1, 14.5, 2.4);
 
   // Patron de la skin
   drawPattern(ctx, S.pattern, { dark: P.jacketDark, accent: P.accent }, torsoH);
@@ -645,10 +656,11 @@ function drawHead(ctx, x, y, lean, skin) {
   ctx.rotate(lean * 0.5);
 
   // CUELLO: a tamano real (no se encoge con la cabeza), de la barbilla
-  // al cuello de la chaqueta. Es lo que separa cabeza y torso.
-  fillRoundRect(ctx, -3.6, 4, 7.2, 11, 3, P.skinShade);
+  // al cuello de la chaqueta. Corto: solo lo justo para que la cabeza no
+  // se hunda en el pecho (con uno largo parecia una jirafa).
+  fillRoundRect(ctx, -3.4, 4, 6.8, 7, 2.6, P.skinShade);
   // Sombra donde la barbilla tapa el cuello
-  fillRoundRect(ctx, -3.6, 4, 7.2, 3.4, 1.6, 'rgba(0,0,0,0.22)');
+  fillRoundRect(ctx, -3.4, 4, 6.8, 2.8, 1.4, 'rgba(0,0,0,0.22)');
 
   // A partir de aqui, la cabeza con sus medidas de siempre, encogida.
   ctx.scale(HEAD_SCALE, HEAD_SCALE);
@@ -675,6 +687,34 @@ function drawHead(ctx, x, y, lean, skin) {
   drawHeadwearFront(ctx, P, H);
 
   ctx.restore();
+}
+
+/**
+ * Cabezas a las que NO se les ponen gafas de sol: los bichos (orejas,
+ * morro, cuernos) porque les quedan de disfraz, y las que ya llevan la
+ * cara tapada por un visor o una mascara.
+ */
+const SIN_GAFAS = new Set(['orejas', 'mono', 'cuernos', 'astro', 'mascara']);
+
+/**
+ * GAFAS DE SOL: la banda oscura sobre los ojos de los sprites planos.
+ * El cristal se deja medio transparente a proposito, para que el ojo se
+ * siga viendo por debajo y el personaje no pierda la cara.
+ */
+function drawGafas(ctx) {
+  // Cristal (no llega a la nariz: si se le monta encima parece un antifaz)
+  fillRoundRect(ctx, 1.2, -4.8, 8.8, 5.2, 2.2, 'rgba(24, 30, 46, 0.55)');
+  // Montura de arriba, que es lo que las hace gafas y no una sombra
+  fillRoundRect(ctx, 0.6, -5.4, 9.8, 1.9, 0.95, '#1b2232');
+  // Patilla hasta la oreja
+  fillRoundRect(ctx, -2.6, -4.6, 4.5, 1.5, 0.75, '#1b2232');
+  // Reflejo
+  ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(3, -1.4);
+  ctx.lineTo(5.6, -3.6);
+  ctx.stroke();
 }
 
 /**
@@ -714,14 +754,20 @@ function drawFace(ctx, P, H) {
   ctx.arc(6.4, -2, 1.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // --- CEJA / flequillo (del color del pelo), gruesa y pegada al ojo ---
-  ctx.strokeStyle = H.color;
-  ctx.lineWidth = 2.4;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(2.4, -6.6);
-  ctx.lineTo(8.6, -5.6);
-  ctx.stroke();
+  // --- GAFAS DE SOL o CEJA ---
+  // Las dos cosas a la vez quedaban como un churro negro de oreja a
+  // nariz: con gafas, la montura ya hace de ceja.
+  if (!SIN_GAFAS.has(H.tipo)) {
+    drawGafas(ctx);
+  } else {
+    ctx.strokeStyle = H.color;
+    ctx.lineWidth = 2.4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(2.4, -6.6);
+    ctx.lineTo(8.6, -5.6);
+    ctx.stroke();
+  }
 
   // --- BOCA: una raya corta bajo la nariz ---
   ctx.strokeStyle = 'rgba(110, 62, 46, 0.85)';
@@ -1166,13 +1212,15 @@ function drawLeg(ctx, x, y, hipAngle, kneeAngle, colorLeg, colorBoot, crouch, at
   ctx.lineTo(fx, fy);
   ctx.stroke();
 
-  // Brillo por delante de la pernera
+  // Franja de luz del pantalon: plana y del derecho a lo largo de toda la
+  // pernera (antes era un brillo corto que se perdia al andar).
   if (!atras) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 2.8;
     ctx.beginPath();
-    ctx.moveTo(x + 1.6, y + 1);
-    ctx.lineTo(kx + 1.6, ky - 1);
+    ctx.moveTo(x + 2.2, y + 1);
+    ctx.lineTo(kx + 2.2, ky - 0.5);
+    ctx.lineTo(fx + 2.2, fy - 2);
     ctx.stroke();
   }
 
