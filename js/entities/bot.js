@@ -275,7 +275,13 @@ export class Bot extends Player {
    * arma, mas una chapa con el nombre y la vida encima.
    */
   draw(ctx, time, viewer = null) {
-    if (!this.alive) return;
+    // MUERTO: se le deja caer. La animacion entera (giro, saltito y
+    // fundido) vive en drawPlayer y se apaga sola al terminar; aqui no
+    // se pinta ni arma ni chapa de nombre.
+    if (!this.alive) {
+      drawPlayer(ctx, this, time, this.skin, null);
+      return;
+    }
 
     // ABATIDO: se pinta tumbado. Se gira el lienzo alrededor de sus
     // pies, asi no hace falta un dibujo aparte del personaje.

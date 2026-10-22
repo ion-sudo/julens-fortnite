@@ -71,6 +71,19 @@ const SHOULDER_OFF = 15;
  */
 const HOLD_DROP = 3;
 
+/**
+ * MUERTE
+ * ---------------------------------------------------------------
+ * Al caer, el personaje se desploma hacia atras, se queda un momento
+ * tirado y se desvanece. No hay ninguna "entidad cadaver": el reloj
+ * arranca en el primer dibujo DESPUES de morir (los muertos ya no se
+ * actualizan) y, cuando se acaba, drawPlayer deja de pintarlo solo.
+ */
+const MUERTE_CAIDA = 0.5;     // segundos en tumbarse
+const MUERTE_QUIETO = 0.5;    // tirado en el suelo
+const MUERTE_FUNDIDO = 0.45;  // se desvanece
+const MUERTE_TOTAL = MUERTE_CAIDA + MUERTE_QUIETO + MUERTE_FUNDIDO;
+
 /** Skin de reserva si no se pasa ninguna (la gratuita). */
 const DEFAULT_SKIN = SKINS[0];
 
@@ -86,13 +99,27 @@ const DEFAULT_SKIN = SKINS[0];
  * @param {object} [gear]  { item, recoil, glider } lo que lleva encima
  */
 export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) {
+  // --- MUERTE: cuanto lleva tirado (0 = vivo o abatido) ---
+  let muerte = 0;
+  if (player.alive === false && !player.downed) {
+    // Se apunta la hora en el primer dibujo tras morir.
+    if (player.deathAt == null) player.deathAt = time;
+    muerte = time - player.deathAt;
+    if (muerte >= MUERTE_TOTAL) return;
+  } else {
+    // Vivo (o reaparecido): se borra el reloj, que si no la proxima
+    // muerte se daria por terminada antes de empezar.
+    player.deathAt = null;
+  }
+
   const pose = getPose(player, time);
+  pose.muerto = muerte > 0;
 
   // El brazo delantero apunta hacia el raton cuando lleva algo en la mano.
   // Como el sprite se voltea con scale(facing, 1), hay que reflejar el
   // angulo: un vector (cos a, sin a) del mundo es (cos(PI-a), sin(PI-a))
   // dentro del espacio ya volteado.
-  if (gear?.item) {
+  if (gear?.item && !pose.muerto) {
     pose.held = gear.item;
     pose.recoil = gear.recoil || 0;
     pose.aim = player.facing === 1 ? player.aimAngle : Math.PI - player.aimAngle;
@@ -110,6 +137,12 @@ export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) 
       }
       // El retroceso del disparo echa el cuerpo atras un instante.
       pose.lean += Math.min(pose.recoil, 6) * 0.012;
+    }
+
+    // Un golpe le levanta el canon: estando quieto como un palo no se
+    // notaba que le habian dado.
+    if (player.hurtFlash > 0) {
+      pose.aim -= 0.22 * Math.min(1, player.hurtFlash / 0.25);
     }
   }
 
@@ -129,6 +162,19 @@ export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) 
 
   // --- Transformacion: pies del personaje, direccion y squash ---
   ctx.translate(player.x + player.w / 2, player.y + player.h);
+
+  // CAIDA AL MORIR: se gira el personaje entero sobre sus pies hasta
+  // dejarlo tumbado, con un saltito al principio (el empujon del
+  // disparo) y un fundido al final.
+  if (muerte > 0) {
+    const caida = Math.min(1, muerte / MUERTE_CAIDA);
+    const suave = 1 - (1 - caida) * (1 - caida);   // frena al llegar al suelo
+    ctx.rotate(player.facing > 0 ? suave * Math.PI / 2 : -suave * Math.PI / 2);
+    ctx.translate(0, -Math.sin(caida * Math.PI) * 5);
+    const resto = muerte - MUERTE_CAIDA - MUERTE_QUIETO;
+    if (resto > 0) ctx.globalAlpha = Math.max(0, 1 - resto / MUERTE_FUNDIDO);
+  }
+
   ctx.scale(player.facing, 1);
 
   // Squash & stretch: se aplasta al aterrizar y se estira al saltar.
@@ -165,6 +211,16 @@ export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) 
     ctx.lineWidth = 2;
     ctx.strokeRect(player.x, player.y, player.w, player.h);
   }
+}
+
+/**
+ * ¿Queda algo por dibujar de un muerto? Lo pregunta el bucle de dibujo
+ * de los bots, que hasta ahora se los saltaba en cuanto caian y por eso
+ * desaparecian de golpe.
+ */
+export function sigueLaMuerte(e, time) {
+  if (e.alive !== false || e.downed) return true;
+  return e.deathAt == null || time - e.deathAt < MUERTE_TOTAL;
 }
 
 /**
@@ -215,6 +271,17 @@ function getPose(p, time) {
     time, speed: Math.abs(p.vx || 0),
   };
 
+  // MUERTO: pose floja. Los brazos caen hacia atras y las piernas se
+  // quedan sueltas; el giro de la caida lo pone drawPlayer.
+  if (p.alive === false && !p.downed) {
+    st.armFront = 2.5; st.armBack = 2.2;
+    st.elbowFront = 0.25; st.elbowBack = 0.3;
+    st.legFront = 0.3; st.legBack = -0.12;
+    st.kneeFront = 0.4; st.kneeBack = 0.18;
+    st.lean = 0.14;
+    return st;
+  }
+
   // EMOTE en marcha: manda sobre cualquier otra pose. Se comprueba antes
   // del switch porque bailando da igual si estabas quieto o andando.
   if (p.emote) {
@@ -242,16 +309,21 @@ function getPose(p, time) {
       break;
     }
     case 'run': {
-      const swing = 1.05;
+      // Zancada mas larga, rodillas mas altas y cabeceo: antes corria
+      // como si trotara de puntillas.
+      const swing = 1.18;
       st.legFront = Math.sin(phase) * swing;
       st.legBack = Math.sin(phase + Math.PI) * swing;
-      st.kneeFront = Math.max(0, Math.sin(phase + 1.2)) * 1.15;
-      st.kneeBack = Math.max(0, Math.sin(phase + 1.2 + Math.PI)) * 1.15;
+      st.kneeFront = Math.max(0, Math.sin(phase + 1.2)) * 1.35;
+      st.kneeBack = Math.max(0, Math.sin(phase + 1.2 + Math.PI)) * 1.35;
       st.armFront = Math.sin(phase + Math.PI) * 0.95;
       st.armBack = Math.sin(phase) * 0.95;
       st.elbowFront = 0.9; st.elbowBack = 0.9;
-      st.lean = -0.24;
+      st.lean = -0.30;
       st.bob = Math.abs(Math.sin(phase)) * -2.5;
+      // La cabeza sube y baja al doble de ritmo que las piernas (una vez
+      // por pisada): es lo que hace que la carrera parezca que pesa.
+      st.headY -= Math.abs(Math.sin(phase)) * 1.2;
       break;
     }
     case 'walk': {
@@ -338,6 +410,20 @@ function getPose(p, time) {
       st.bob = b * 0.8;
       st.lean = -0.03;
     }
+  }
+
+  // GOLPE: al recibir dano el cuerpo se echa atras y encoge la cabeza
+  // entre los hombros durante un cuarto de segundo (hurtFlash). Es la
+  // senal de "me han dado" que se ve desde lejos, sin numeros ni barras.
+  const golpe = p.hurtFlash || 0;
+  if (golpe > 0) {
+    const k = Math.min(1, golpe / 0.25);
+    st.lean += 0.34 * k;        // el torso se va hacia atras
+    st.bob += 2.2 * k;          // y el cuerpo se hunde
+    st.headY += 2.4 * k;        // la cabeza se mete entre los hombros
+    st.armBack += 0.7 * k;
+    st.kneeFront += 0.25 * k;   // las rodillas ceden
+    st.kneeBack += 0.2 * k;
   }
 
   return st;

@@ -26,6 +26,7 @@ import { SKINS, GLIDERS } from '../data/cosmetics.js';
 import { rollWeapon, rollLoot, makeWeapon } from '../data/loot.js';
 import { WEAPONS } from '../data/weapons.js';
 import { SafeZone } from './safeZone.js';
+import { sigueLaMuerte } from '../entities/playerSprite.js';
 import { BattleBus } from '../entities/battleBus.js';
 import { spreadSpawnPoints, shuffle } from './spawnPoints.js';
 import { assignTeams, areAllies } from './teams.js';
@@ -629,7 +630,9 @@ export class MatchManager {
     }
 
     for (const bot of this.bots) {
-      if (!bot.alive) continue;
+      // Los muertos se siguen pintando mientras dura su caida (antes
+      // desaparecian de golpe en el mismo fotograma en que caian).
+      if (!bot.alive && !sigueLaMuerte(bot, time)) continue;
       // Los que aun van DENTRO del bus no se pintan: estarian todos en
       // el mismo punto y sus chapas de nombre se amontonarian.
       if (bot.flight === 'bus') continue;
