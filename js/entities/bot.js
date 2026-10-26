@@ -283,17 +283,10 @@ export class Bot extends Player {
       return;
     }
 
-    // ABATIDO: se pinta tumbado. Se gira el lienzo alrededor de sus
-    // pies, asi no hace falta un dibujo aparte del personaje.
+    // ABATIDO: se arrastra. La pose y el giro van en drawPlayer (antes se
+    // giraba el lienzo aqui a mano y quedaba un cadaver tieso).
     if (this.downed) {
-      ctx.save();
-      ctx.translate(this.x + this.w / 2, this.y + this.h);
-      ctx.rotate(this.facing > 0 ? -Math.PI / 2 : Math.PI / 2);
-      ctx.translate(-(this.x + this.w / 2), -(this.y + this.h));
-      ctx.globalAlpha = 0.85;
-      drawPlayer(ctx, this, time, this.skin, { item: null, recoil: 0, glider: null });
-      ctx.restore();
-
+      drawPlayer(ctx, this, time, this.skin, null);
       this._drawDownTag(ctx, viewer);
       return;
     }

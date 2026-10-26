@@ -119,7 +119,7 @@ export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) 
   // Como el sprite se voltea con scale(facing, 1), hay que reflejar el
   // angulo: un vector (cos a, sin a) del mundo es (cos(PI-a), sin(PI-a))
   // dentro del espacio ya volteado.
-  if (gear?.item && !pose.muerto) {
+  if (gear?.item && !pose.muerto && !player.downed) {
     pose.held = gear.item;
     pose.recoil = gear.recoil || 0;
     pose.aim = player.facing === 1 ? player.aimAngle : Math.PI - player.aimAngle;
@@ -173,6 +173,17 @@ export function drawPlayer(ctx, player, time, skin = DEFAULT_SKIN, gear = null) 
     ctx.translate(0, -Math.sin(caida * Math.PI) * 5);
     const resto = muerte - MUERTE_CAIDA - MUERTE_QUIETO;
     if (resto > 0) ctx.globalAlpha = Math.max(0, 1 - resto / MUERTE_FUNDIDO);
+  }
+
+  // ABATIDO: se tumba girando sobre sus pies. No llega a los 90 grados
+  // a proposito: asi queda apoyado en los codos, con la cabeza algo
+  // levantada, como quien se arrastra.
+  if (player.downed) {
+    // Boca abajo y con la cabeza por delante: girando al otro lado
+    // quedaba panza arriba con las piernas en pompa.
+    ctx.rotate(player.facing > 0 ? 1.38 : -1.38);
+    ctx.translate(0, -3);
+    ctx.globalAlpha *= 0.92;
   }
 
   ctx.scale(player.facing, 1);
@@ -270,6 +281,23 @@ function getPose(p, time) {
     // la velocidad, y el aura late.
     time, speed: Math.abs(p.vx || 0),
   };
+
+  // ABATIDO: tumbado boca abajo y tirando con los brazos. El giro del
+  // cuerpo lo pone drawPlayer; aqui van las brazadas y el arrastre de
+  // las piernas, que es lo que hace que parezca que se mueve y no que
+  // es un cadaver girado 90 grados (que es como estaba antes).
+  if (p.downed) {
+    const brazada = Math.sin(p.stepPhase || 0);
+    st.armFront = 1.95 + brazada * 0.55;
+    st.armBack = 1.25 - brazada * 0.45;
+    st.elbowFront = 0.55; st.elbowBack = 0.95;
+    st.legFront = -0.14 + brazada * 0.14;
+    st.legBack = 0.12 - brazada * 0.1;
+    st.kneeFront = 0.3; st.kneeBack = 0.12;
+    st.lean = -0.2;                      // la cabeza, levantada del suelo
+    st.bob = Math.abs(brazada) * 0.7;
+    return st;
+  }
 
   // MUERTO: pose floja. Los brazos caen hacia atras y las piernas se
   // quedan sueltas; el giro de la caida lo pone drawPlayer.
@@ -412,6 +440,20 @@ function getPose(p, time) {
     }
   }
 
+  // CURARSE: echa la cabeza atras para beber.
+  if (p.action === 'heal') st.lean += 0.12;
+
+  // CONSTRUIR: el brazo libre pega un empujon hacia delante, como quien
+  // planta la pared de un manotazo.
+  if (p.action === 'build') {
+    const avance = 1 - Math.max(0, Math.min(1, (p.actionTimer || 0) / 0.22));
+    const golpeo = Math.sin(avance * Math.PI);   // 0 -> 1 -> 0
+    st.armBack = 1.1 + golpeo * 0.55;
+    st.elbowBack = 0.5 - golpeo * 0.35;
+    st.lean -= 0.1 * golpeo;
+    st.kneeFront += 0.18 * golpeo;
+  }
+
   // GOLPE: al recibir dano el cuerpo se echa atras y encoge la cabeza
   // entre los hombros durante un cuarto de segundo (hurtFlash). Es la
   // senal de "me han dado" que se ve desde lejos, sin numeros ni barras.
@@ -465,7 +507,7 @@ function drawCharacter(ctx, st, skin) {
   // Con un arma en la mano, el brazo de atras NO cuelga: sujeta el arma
   // por delante, que es como se coge un fusil de verdad (y como salen en
   // los sprites de referencia). Sin arma, cuelga y acompana al paso.
-  if (st.held && st.held.kind === 'weapon') {
+  if (st.held && st.held.kind === 'weapon' && st.action !== 'build') {
     drawSupportArm(ctx, st, hipX - 2, shoulderY + HOLD_DROP, P);
   } else {
     drawArm(ctx, hipX - 2, shoulderY, st.armBack, st.elbowBack, P.jacketDark, P, st.crouch, S, true);
@@ -495,6 +537,13 @@ function drawCharacter(ctx, st, skin) {
     drawHoldingArm(ctx, st, hipX + 2, shoulderY + HOLD_DROP, P);
   } else {
     drawArm(ctx, hipX + 2, shoulderY, st.armFront, st.elbowFront, P.jacket, P, st.crouch, S, false);
+  }
+
+  // --- MANOTAZO DE CONSTRUIR, por delante de todo ---
+  // Detras del torso no se veia: el torso y el arma lo tapaban entero.
+  if (st.action === 'build') {
+    drawArm(ctx, hipX + 3, shoulderY + 2, st.armBack, st.elbowBack,
+      P.jacket, P, st.crouch, S, false);
   }
 
   // --- Hombreras, por encima de los brazos ---
@@ -668,12 +717,18 @@ const ARM_REACH = 23;
 function drawHoldingArm(ctx, st, shoulderX, shoulderY, P) {
   const item = st.held;
 
-  // Las curas no se apuntan: se sostienen delante del pecho.
+  // CURARSE: no se apunta, se bebe. El brazo sube el bote hasta la cara
+  // con un pulso suave, en vez de quedarse plantado ante el pecho.
   if (item.kind === 'heal') {
-    drawArm(ctx, shoulderX, shoulderY, 0.9, 1.5, P.jacket, P, st.crouch);
-    const hx = shoulderX + Math.sin(0.9) * 12 + Math.sin(2.4) * 11;
-    const hy = shoulderY + Math.cos(0.9) * 12 + Math.cos(2.4) * 11;
-    drawHeal(ctx, item, { x: hx, y: hy - 4, scale: 0.55 });
+    const pulso = Math.sin((st.time || 0) * 7) * 0.06;
+    const hombro = 1.35 + pulso;      // brazo levantado
+    const codo = 1.25 - pulso;        // y doblado hacia la boca
+    drawArm(ctx, shoulderX, shoulderY, hombro, codo, P.jacket, P, st.crouch);
+    const largo = st.crouch ? 9.5 : 11;
+    const ante = st.crouch ? 8.5 : 10;
+    const hx = shoulderX + Math.sin(hombro) * largo + Math.sin(hombro + codo) * ante;
+    const hy = shoulderY + Math.cos(hombro) * largo + Math.cos(hombro + codo) * ante;
+    drawHeal(ctx, item, { x: hx, y: hy - 3, scale: 0.55 });
     return;
   }
 

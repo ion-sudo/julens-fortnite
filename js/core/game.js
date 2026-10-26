@@ -1439,27 +1439,14 @@ export class Game {
       this.match.draw(ctx, camera, this.time);
       this.match.zone.draw(ctx, camera);
 
-      if (this.player.downed) {
-        // ABATIDO: se pinta tumbado, girando el lienzo alrededor de sus
-        // pies. Mismo truco que con los bots, sin dibujo aparte.
-        const p = this.player;
-        ctx.save();
-        ctx.translate(p.x + p.w / 2, p.y + p.h);
-        ctx.rotate(p.facing > 0 ? -Math.PI / 2 : Math.PI / 2);
-        ctx.translate(-(p.x + p.w / 2), -(p.y + p.h));
-        ctx.globalAlpha = 0.9;
-        drawPlayer(ctx, p, this.time, this.loadout?.skin, {
-          item: null, recoil: 0, glider: null,
-        });
-        ctx.restore();
-      } else {
-        drawPlayer(ctx, this.player, this.time, this.loadout?.skin, {
-          // En el aire no se lleva nada en la mano, solo la paravela.
-          item: this.player.flight ? null : this.inventory.equipped,
-          recoil: this.combat.recoil,
-          glider: this.loadout?.glider,
-        });
-      }
+      // ABATIDO incluido: tumbarse y arrastrarse lo hace drawPlayer, que
+      // es donde vive la pose (antes se giraba el lienzo aqui a mano).
+      drawPlayer(ctx, this.player, this.time, this.loadout?.skin, {
+        // En el aire no se lleva nada en la mano, solo la paravela.
+        item: this.player.flight ? null : this.inventory.equipped,
+        recoil: this.combat.recoil,
+        glider: this.loadout?.glider,
+      });
 
       // Flechita sobre tu personaje: con 50 bots por medio, y varios
       // llevando tu misma skin, hace falta saber cual eres.

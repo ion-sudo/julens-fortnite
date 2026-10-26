@@ -287,6 +287,14 @@ export class BuildManager {
 
     for (const p of s.platforms) this.world.addPlatform(p);
 
+    // Animacion de CONSTRUIR: el manotazo con el que planta la pieza
+    // (lo dibuja entities/playerSprite.js). Si estaba bebiendose una
+    // cura no se le pisa la accion: eso lo gestiona el sistema de curas.
+    if (owner.action !== 'heal') {
+      owner.action = 'build';
+      owner.actionTimer = 0.22;
+    }
+
     this.particles?.puff(cellX + GRID / 2, cellY + GRID / 2, 'rgba(200, 165, 110, 0.6)', 6);
     playBuild();
     this.onPlaced?.(s, owner);
